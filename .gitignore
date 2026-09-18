@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.vite/
+*.local
+.DS_Store
+Thumbs.db
+
+# Never commit tenant data. The app loads these client-side only; they must not land in git.
+*.tenant.json
+tenant-*.json
+src/data/tenant/
+Output/
+
+# Local-only settings
+settings.local.json
+.env
+.env.*
+!.env.example

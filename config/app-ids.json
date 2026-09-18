@@ -1,0 +1,38 @@
+{
+  "$comment": "Application identifier -> friendly name. Seeded verbatim from Get-WellKnownAppId in CA-BaselineAuditor/Private/Format-PolicyDisplay.ps1. Add entries here rather than in code. NEVER guess a name for a GUID you have not verified against Entra - an unresolved GUID renders as a truncated mono token with the full value on hover, which is honest; a wrong friendly name is a lie the user cannot detect. `npm run verify` lists every GUID used by the baselines that is missing from this map.",
+
+  "00000002-0000-0ff1-ce00-000000000000": "Office 365 Exchange Online",
+  "00000003-0000-0ff1-ce00-000000000000": "Office 365 SharePoint Online",
+  "67ad5377-2d78-4ac2-a867-6300cda00e85": "Office 365",
+  "00000006-0000-0ff1-ce00-000000000000": "Microsoft Office 365 Portal",
+  "c44b4083-3bb0-49c1-b47d-974e53cbdf3c": "Azure Portal",
+  "797f4846-ba00-4fd7-ba43-dac1f8f63013": "Azure Service Management",
+  "04b07795-8ddb-461a-bbee-02f9e1bf7b46": "Azure CLI",
+  "1950a258-227b-4e31-a9cf-717495945fc2": "Azure PowerShell",
+  "00000003-0000-0000-c000-000000000000": "Microsoft Graph",
+  "0000000a-0000-0000-c000-000000000000": "Microsoft Intune",
+  "d4ebce55-015a-49b5-a083-c84d1797ae8c": "Microsoft Intune Enrollment",
+  "de8bc8b5-d9f9-48b1-a8ad-b748da725064": "Microsoft 365 Compliance Center",
+  "00000007-0000-0ff1-ce00-000000000000": "Microsoft Power BI",
+  "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe": "Microsoft Teams",
+  "5e3ce6c0-2b1f-4285-8d4b-75ee78787346": "Microsoft Teams Web Client",
+  "00000015-0000-0000-c000-000000000000": "Microsoft Dynamics CRM",
+  "fc780465-2017-40d4-a0c5-307022471b92": "Microsoft Exchange REST API",
+  "00b41c95-dab0-4487-9791-b9d2c32c80f2": "Office 365 Management APIs",
+  "09abbdfd-ed23-44ee-a2d9-a627aa1c90f3": "Microsoft Defender for Cloud Apps",
+  "00000002-0000-0000-c000-000000000000": "Azure Active Directory (legacy)",
+
+  "$comment2": "Added beyond the PowerShell map. Each was cross-checked against BOTH Microsoft Learn and the merill/microsoft-info dataset (the same source CA-Reporter's Get-MerillAppInfo.ps1 uses); run `npm run sync-app-ids` to refresh from it. Windows 365 / Azure Virtual Desktop / Windows Cloud Login: learn.microsoft.com/windows-365/enterprise/set-conditional-access-policies. Microsoft Remote Desktop: the baselines' prose calls it 'the Windows App', but 'Microsoft Remote Desktop' is the Entra display name, so that is what we show. STILL UNRESOLVED, deliberately: a4f2693f-129c-4b96-982b-2c364b8314d7 - absent from all 4434 entries of the merill dataset, and Van Surksum CAD013 describes it only as one of 'two further selected apps'. It renders as a truncated GUID until somebody confirms it.",
+
+  "499b84ac-1321-427f-aa17-267ca6975798": "Azure DevOps",
+  "0af06dc6-e4b5-4f28-818e-e78e62d137a5": "Windows 365",
+  "9cdead84-a844-4324-93f2-b2e6bb768d07": "Azure Virtual Desktop",
+  "270efc09-cd0d-444b-a71f-39af4910ec45": "Windows Cloud Login",
+  "a4a365df-50f1-4397-bc59-1a1564b8bb9c": "Microsoft Remote Desktop",
+  "996def3d-b36c-4153-8607-a6fd3c01b89f": "Dynamics 365 Business Central",
+
+  "Office365": "Office 365 (Suite)",
+  "MicrosoftAdminPortals": "Microsoft Admin Portals",
+  "All": "All Cloud Apps",
+  "None": "No Cloud Apps"
+}

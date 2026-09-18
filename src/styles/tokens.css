@@ -1,0 +1,177 @@
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
+ *
+ * macrostructure: Workbench · nav: N3 side-rail · footer: none (app shell)
+ * genre: modern-minimal · tone: utilitarian · theme: custom "Instrument"
+ * vibe: dark instrument panel, hairline-ruled, one cold signal
+ * paper: oklch(15% 0.012 250) · accent: oklch(72% 0.145 225) cold azure
+ * fonts: IBM Plex Sans (display + body) + IBM Plex Mono (outlier)
+ * axes: dark / humanist-sans / cool
+ * differs from M365-Change-Radar (Midnight · dark/grotesk-sans/warm) on display style + accent hue
+ *
+ * WHY CUSTOM RATHER THAN CATALOG. Dark-mode-only is a house rule, which rules out the
+ * light-paper themes. Of the dark catalog themes, Midnight is already in service on a
+ * sibling repo, and Terminal is mono-only - which would destroy this app's single most
+ * important non-hue channel (mono marks a literal policy value, sans marks our own
+ * prose). So the palette is constructed rather than picked.
+ */
+
+:root {
+  /* -- paper -------------------------------------------------------------
+   * Cool-neutral, anchored at hue 250, low but never zero chroma. Depth is
+   * carried by lightness steps and hairlines, never by shadow or glow - a
+   * glow on a dark surface is one of the reliable generated-UI tells.
+   */
+  --color-paper: oklch(15% 0.012 250);
+  --color-paper-2: oklch(19% 0.014 250);
+  --color-paper-3: oklch(24% 0.016 250);
+
+  /* Decorative hairline. Exempt from the 3:1 gate, but 30% was so close to the
+   * paper it effectively vanished; 34% reads as a drawn line without shouting. */
+  --color-rule: oklch(34% 0.014 250);
+
+  /* Control border. Must clear 3:1 against the surface it sits ON, and node
+   * surfaces are paper-2/paper-3, not paper - so paper-3 is the binding case.
+   * Measured: 48% gave 2.52:1 there and failed. 53% measures 3.12:1. */
+  --color-rule-ctl: oklch(53% 0.018 250);
+
+  --color-neutral: oklch(62% 0.016 250);
+  --color-muted: oklch(72% 0.014 250);
+  --color-ink: oklch(94% 0.008 250);
+
+  /* -- accent ------------------------------------------------------------
+   * ONE accent. The budget allows two; the second slot is deliberately left
+   * unspent, and nothing in this app may claim it.
+   *
+   * Cold azure rather than red or amber on purpose: a difference between two
+   * baselines is not an error. Red would assert that one of them is wrong,
+   * which the tool is in no position to judge. Azure reads as "marked".
+   *
+   * --color-focus is the SAME hue at higher lightness, so the focus ring does
+   * not consume the second accent slot either.
+   */
+  --color-accent: oklch(72% 0.145 225);
+  --color-accent-ink: oklch(16% 0.02 225);
+  --color-focus: oklch(80% 0.13 225);
+
+  /* -- type --------------------------------------------------------------
+   * IBM Plex Sans + IBM Plex Mono are a designed pair - same vertical metrics,
+   * same rhythm. That matters more here than usual, because mono value tokens
+   * sit inline beside sans labels inside dense nodes; a mismatched pair makes
+   * every row look subtly misaligned.
+   *
+   * Plex Sans is humanist, not neo-grotesque, which is what separates this from
+   * the Geist-bodied sibling repo, and it holds up at the 13px the picker needs.
+   */
+  --font-display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-outlier: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  --text-xs: 0.6875rem; /* 11px - micro-labels, folios */
+  --text-sm: 0.8125rem; /* 13px - value tokens, picker rows */
+  --text-base: 0.9375rem; /* 15px - body */
+  --text-lg: 1.125rem; /* 18px - node titles */
+  --text-xl: 1.375rem; /* 22px - column headers */
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+  --text-display-s: 3.75rem;
+  --text-display: 4.5rem;
+
+  --tracking-display: -0.03em;
+  --tracking-label: 0.08em;
+
+  /* -- space: 4pt scale, named by role ---------------------------------- */
+  --space-3xs: 0.125rem; /* 2 */
+  --space-2xs: 0.25rem; /* 4 */
+  --space-xs: 0.5rem; /* 8 */
+  --space-sm: 0.75rem; /* 12 */
+  --space-md: 1rem; /* 16 */
+  --space-lg: 1.5rem; /* 24 */
+  --space-xl: 2rem; /* 32 */
+  --space-2xl: 3rem; /* 48 */
+  --space-3xl: 4rem; /* 64 */
+
+  /* -- motion ------------------------------------------------------------
+   * Named easings only. The browser default `ease` is banned, as is
+   * `transition: all`. Only transform and opacity are ever animated.
+   */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+
+  /* -- form ------------------------------------------------------------- */
+  --rule-hair: 1px;
+  --radius-input: 6px;
+  --radius-pill: 999px;
+  --control-h: 2.75rem; /* 44px touch floor, shared by inputs and their buttons */
+
+  /* -- layering --------------------------------------------------------- */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* ======================================================================
+   * DIFF ENCODING - the part of this file that does the real work.
+   *
+   * A graph UI wants to colour-code every node type and every diff state.
+   * With a one-accent budget capped at 3% of viewport, it cannot. So meaning
+   * is carried by channels that are not hue, and the accent is spent on
+   * exactly one thing: WHICH ROW DIFFERS.
+   *
+   * Channel 1 - rank position. Vertical order is fixed and semantic, and the
+   *   sticky gutter names each rank once. This does most of the work the old
+   *   ten-colour palette was doing.
+   * Channel 2 - fill and weight. See the terminal tokens below.
+   * Channel 3 - silhouette. Terminals carry a chamfered corner.
+   * Channel 4 - family. Mono = a literal value from the policy. Sans = our prose.
+   * Channel 5 - opacity. Agreement recedes; disagreement stays put.
+   * Channel 6 - bar WIDTH, not bar colour. One hue, three weights.
+   *
+   * Budget arithmetic, worst case - 6 columns x 14 ranks, everything differing:
+   *   6 x 14 x 3px x 44px = 11,088px^2 against 1440x900 = 1,296,000px^2 = 0.86%.
+   * Comfortably inside 3%. If the highlight ever grows past a row-level bar,
+   * redo this sum before shipping it.
+   * ====================================================================== */
+
+  /* Agreement recedes rather than the difference shouting. */
+  --diff-same-opacity: 0.62;
+  --diff-ghost-opacity: 0.4;
+
+  /* Emphasis is bar width. There is no second hue. */
+  --diff-bar-coverage: 1px;
+  --diff-bar-differs: 2px;
+  --diff-bar-only: 3px;
+
+  /* Terminal nodes, distinguished without hue.
+   *
+   * MEASURED CORRECTION. The intent was "block is filled and inverted, grant is
+   * open", with fill carrying the distinction. On a dark theme it cannot: there
+   * is almost no luminance headroom below the paper, so even a generous fill
+   * step measures only 1.5-2.1:1 against the open terminal. In greyscale that
+   * is close to invisible.
+   *
+   * So fill is a SUPPORTING cue here, not the load-bearing one. What actually
+   * carries block-vs-grant, in order of strength:
+   *   1. type weight + case  - 700 small-caps, tracked, against 500 sentence case
+   *   2. the stop-bar        - a 2px rule across the top edge, which grant lacks
+   *   3. fill                - a perceptible raise, but never relied upon alone
+   * All three survive greyscale. Verify with a desaturated screenshot before
+   * changing any of them.
+   */
+  --terminal-block-fill: oklch(32% 0.018 250); /* 1.55:1 vs open - support only */
+  --terminal-block-weight: 700;
+  --terminal-block-bar: 2px;
+  --terminal-open-fill: transparent;
+  --terminal-open-weight: 500;
+  --terminal-chamfer: 10px;
+
+  --node-w: 268px;
+  --node-gutter: var(--space-lg);
+  --rail-w: 320px;
+}

@@ -1,0 +1,789 @@
+{
+  "version": "7.0.0",
+  "baselineKey": "CIS",
+  "source": "CIS Microsoft 365 Foundations Benchmark v7.0.0",
+  "url": "https://www.cisecurity.org/benchmark/microsoft_365",
+  "description": "Conditional Access controls from section 5.2.2 of the CIS Microsoft 365 Foundations Benchmark v7.0.0 (released 19 May 2026). Level 1 (L1) controls are practical minimum-security recommendations for all organisations; Level 2 (L2) controls are for higher-security environments and may need additional licensing. 5.2.2.14 (trusted named locations defined) is covered by the Named Locations posture check rather than a policy pattern.",
+  "totalPolicies": 16,
+  "policies": [
+    {
+      "id": "CIS-5.2.2.1",
+      "name": "Ensure multifactor authentication is enabled for all users in administrative roles",
+      "fullName": "CIS 5.2.2.1 (L1) — Ensure multifactor authentication is enabled for all users in administrative roles",
+      "category": "User",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "All users assigned to administrative directory roles must be required to use multifactor authentication via Conditional Access. Privileged accounts are high-value targets.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "mfa",
+        "admin",
+        "administrator",
+        "privileged",
+        "role"
+      ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "CIS-5.2.2.2",
+      "name": "Ensure multifactor authentication is enabled for all users",
+      "fullName": "CIS 5.2.2.2 (L1) — Ensure multifactor authentication is enabled for all users",
+      "category": "User",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "Multifactor authentication must be required for all users accessing all cloud applications via Conditional Access. This is the foundational identity control for every tenant.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "mfa",
+        "all users",
+        "multifactor"
+      ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "CIS-5.2.2.3",
+      "name": "Enable Conditional Access policies to block legacy authentication",
+      "fullName": "CIS 5.2.2.3 (L1) — Enable Conditional Access policies to block legacy authentication",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "Legacy authentication protocols do not support MFA and bypass Conditional Access controls. A policy must block Exchange ActiveSync and Other Clients for all users and all resources.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "other",
+          "exchangeActiveSync"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "legacy",
+        "block",
+        "other",
+        "activesync",
+        "basic auth"
+      ],
+      "policyIntent": "legacy-auth-block"
+    },
+    {
+      "id": "CIS-5.2.2.4",
+      "name": "Ensure Sign-in frequency is enabled and browser sessions are not persistent for Administrative users",
+      "fullName": "CIS 5.2.2.4 (L1) — Ensure Sign-in frequency is enabled and browser sessions are not persistent for Administrative users",
+      "category": "User",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "Administrative roles should be subject to a sign-in frequency (CIS recommends 4 hours or less) and a never-persistent browser session, limiting the window in which a stolen admin session can be reused.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "sessionControls": {
+          "signInFrequency": true,
+          "persistentBrowser": {
+            "mode": "never"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "sign-in frequency",
+        "persistent",
+        "browser session",
+        "admin"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CIS-5.2.2.5",
+      "name": "Ensure 'Phishing-resistant MFA strength' is required for Administrators",
+      "fullName": "CIS 5.2.2.5 (L2) — Ensure 'Phishing-resistant MFA strength' is required for Administrators",
+      "category": "User",
+      "priority": "Should Have",
+      "profileLevel": "L2",
+      "description": "Administrative roles should be required to satisfy the built-in Phishing-resistant MFA authentication strength (FIDO2, Windows Hello for Business, certificate-based authentication or device-bound passkeys).",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "PhishingResistantMFA"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "authenticationStrength": {
+            "requirementsSatisfied": "phishingResistant"
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeRoles": true
+        }
+      },
+      "keywords": [
+        "phishing resistant",
+        "authentication strength",
+        "admin",
+        "fido2"
+      ],
+      "policyIntent": "admin-protection"
+    },
+    {
+      "id": "CIS-5.2.2.6",
+      "name": "Enable Identity Protection user risk policies",
+      "fullName": "CIS 5.2.2.6 (L1) — Enable Identity Protection user risk policies",
+      "category": "User",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "A Conditional Access policy using Entra ID Protection user risk should require a secure password change (with MFA) for users whose account risk is High. Requires Entra ID P2.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP2"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "passwordChange"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "userRiskLevels": [
+            "high"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [
+        "user risk",
+        "high risk",
+        "password change",
+        "identity protection"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CIS-5.2.2.7",
+      "name": "Enable Identity Protection sign-in risk policies",
+      "fullName": "CIS 5.2.2.7 (L1) — Enable Identity Protection sign-in risk policies",
+      "category": "User",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "A Conditional Access policy using Entra ID Protection sign-in risk should require MFA for sign-ins assessed as Medium or High risk. Requires Entra ID P2.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP2"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "signInRiskLevels": [
+            "high",
+            "medium"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [
+        "sign-in risk",
+        "risky",
+        "mfa",
+        "identity protection"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CIS-5.2.2.8",
+      "name": "Ensure 'sign-in risk' is blocked for medium and high risk",
+      "fullName": "CIS 5.2.2.8 (L2) — Ensure 'sign-in risk' is blocked for medium and high risk",
+      "category": "User",
+      "priority": "Should Have",
+      "profileLevel": "L2",
+      "description": "A Conditional Access policy should block sign-ins assessed as Medium or High risk outright rather than only challenging them for MFA. Requires Entra ID P2.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP2"
+      ],
+      "requiredFeatures": [
+        "IdentityProtection"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "signInRiskLevels": [
+            "high",
+            "medium"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [
+        "sign-in risk",
+        "block",
+        "high risk",
+        "medium risk"
+      ],
+      "policyIntent": "risk-based"
+    },
+    {
+      "id": "CIS-5.2.2.9",
+      "name": "Ensure a managed device is required for authentication",
+      "fullName": "CIS 5.2.2.9 (L1) — Ensure a managed device is required for authentication",
+      "category": "Device",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "All users should be required to authenticate from a device that is marked compliant or is Entra hybrid joined (require one of the selected controls).",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice",
+            "domainJoinedDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "compliant",
+        "managed device",
+        "hybrid",
+        "device compliance"
+      ],
+      "policyIntent": "device-compliance"
+    },
+    {
+      "id": "CIS-5.2.2.10",
+      "name": "Ensure a managed device is required to register security information",
+      "fullName": "CIS 5.2.2.10 (L1) — Ensure a managed device is required to register security information",
+      "category": "User",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "Registering security information (MFA methods) should require a compliant or Entra hybrid joined device, preventing an attacker with stolen credentials from enrolling their own MFA method.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "DeviceCompliance"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "compliantDevice",
+            "domainJoinedDevice"
+          ],
+          "operator": "OR"
+        },
+        "applications": {
+          "includeUserActions": [
+            "urn:user:registersecurityinfo"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "security info",
+        "registration",
+        "managed device",
+        "compliant"
+      ],
+      "policyIntent": "registration-security"
+    },
+    {
+      "id": "CIS-5.2.2.11",
+      "name": "Ensure sign-in frequency for Intune Enrollment is set to 'Every time'",
+      "fullName": "CIS 5.2.2.11 (L1) — Ensure sign-in frequency for Intune Enrollment is set to 'Every time'",
+      "category": "Device",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "The Microsoft Intune Enrollment application should require MFA with a sign-in frequency of Every time, so that device enrolment always carries a fresh authentication.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1",
+        "Intune"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "mfa"
+          ]
+        },
+        "sessionControls": {
+          "signInFrequency": true
+        },
+        "applications": {
+          "includeApplications": [
+            "d4ebce55-015a-49b5-a083-c84d1797ae8c"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 10,
+        "appScope": 50,
+        "conditions": 10,
+        "policyState": 10
+      },
+      "keywords": [
+        "intune",
+        "enrollment",
+        "enrolment",
+        "sign-in frequency",
+        "every time"
+      ],
+      "policyIntent": "mfa-grant"
+    },
+    {
+      "id": "CIS-5.2.2.12",
+      "name": "Ensure the device code sign-in flow is blocked",
+      "fullName": "CIS 5.2.2.12 (L1) — Ensure the device code sign-in flow is blocked",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "The OAuth device code flow is frequently abused in phishing campaigns to obtain tokens on behalf of users. A Conditional Access policy should block the Device code flow for all users and all resources.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "authenticationFlows": [
+            "deviceCodeFlow"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [
+        "device code",
+        "authentication flow",
+        "block"
+      ],
+      "policyIntent": "auth-flow-block"
+    },
+    {
+      "id": "CIS-5.2.2.13",
+      "name": "Ensure that periodic reauthentication is required for all users",
+      "fullName": "CIS 5.2.2.13 (L1) — Ensure that periodic reauthentication is required for all users",
+      "category": "User",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "All users should be subject to a periodic sign-in frequency so that long-lived sessions are re-validated, limiting the usefulness of a stolen session token. New in v7.0.0.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "SessionControls"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "sessionControls": {
+          "signInFrequency": true
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "sign-in frequency",
+        "reauthentication",
+        "session",
+        "all users"
+      ],
+      "policyIntent": "session-control"
+    },
+    {
+      "id": "CIS-5.2.2.15",
+      "name": "Ensure exclusionary geographic access controls are utilized",
+      "fullName": "CIS 5.2.2.15 (L2) — Ensure exclusionary geographic access controls are utilized",
+      "category": "Location",
+      "priority": "Should Have",
+      "profileLevel": "L2",
+      "description": "A Conditional Access policy should block access from countries or regions where the organisation has no business presence, using country named locations. New in v7.0.0.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "NamedLocations"
+      ],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "locations": {
+            "includeLocations": true
+          }
+        }
+      },
+      "keywords": [
+        "country",
+        "geographic",
+        "block",
+        "location"
+      ],
+      "policyIntent": "location-based"
+    },
+    {
+      "id": "CIS-5.2.2.16",
+      "name": "Ensure Token Protection is enforced for session tokens",
+      "fullName": "CIS 5.2.2.16 (L2) — Ensure Token Protection is enforced for session tokens",
+      "category": "Device",
+      "priority": "Should Have",
+      "profileLevel": "L2",
+      "description": "Token protection (token binding) cryptographically ties sign-in session tokens to the Windows device they were issued to, defeating token theft and replay. New in v7.0.0.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [
+        "TokenProtection"
+      ],
+      "relevantPlatforms": [
+        "Windows"
+      ],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "mobileAppsAndDesktopClients"
+        ],
+        "sessionControls": {
+          "secureSignInSession": {
+            "tokenProtection": true
+          }
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "platforms": {
+          "includePlatforms": [
+            "windows"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        }
+      },
+      "keywords": [
+        "token protection",
+        "binding",
+        "windows",
+        "session token"
+      ],
+      "policyIntent": "token-protection"
+    },
+    {
+      "id": "CIS-5.2.2.17",
+      "name": "Ensure authentication transfer is blocked",
+      "fullName": "CIS 5.2.2.17 (L1) — Ensure authentication transfer is blocked",
+      "category": "Prerequisite",
+      "priority": "Must Have",
+      "profileLevel": "L1",
+      "description": "Authentication transfer lets a signed-in session be handed to another device (for example via QR code) and can be abused to move a phished session. A Conditional Access policy should block the Authentication transfer flow. New in v7.0.0.",
+      "referenceUrl": "https://www.cisecurity.org/benchmark/microsoft_365",
+      "requiredLicenses": [
+        "EntraP1"
+      ],
+      "requiredFeatures": [],
+      "relevantPlatforms": [],
+      "matchPatterns": {
+        "clientAppTypes": [
+          "all"
+        ],
+        "grantControls": {
+          "builtInControls": [
+            "block"
+          ]
+        },
+        "applications": {
+          "includeApplications": [
+            "All"
+          ]
+        },
+        "users": {
+          "includeUsers": [
+            "All"
+          ]
+        },
+        "conditions": {
+          "authenticationFlows": [
+            "authenticationTransfer"
+          ]
+        }
+      },
+      "weightOverrides": {
+        "grantControls": 20,
+        "userScope": 15,
+        "appScope": 15,
+        "conditions": 40,
+        "policyState": 10
+      },
+      "keywords": [
+        "authentication transfer",
+        "authentication flow",
+        "block"
+      ],
+      "policyIntent": "auth-flow-block"
+    }
+  ]
+}

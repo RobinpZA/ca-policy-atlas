@@ -1,0 +1,16 @@
+[
+  {
+    "date": "2026-09-18",
+    "macrostructure": "Workbench",
+    "genre": "modern-minimal",
+    "theme": "custom",
+    "theme_axes": "dark / humanist-sans / cool",
+    "vibe": "dark instrument panel, hairline-ruled, one cold signal",
+    "nav": "N3 side-rail",
+    "footer": "none (app shell)",
+    "enrichment": "none - typography and geometry only",
+    "tone": "utilitarian",
+    "brief": "CA Policy Atlas - React Flow comparison of Entra Conditional Access baselines",
+    "note": "Custom rather than catalog: dark-mode-only rules out the light-paper themes; Midnight is in service on M365-Change-Radar; Terminal is mono-only, which would destroy the mono-vs-sans channel this app uses to separate literal policy values from its own prose."
+  }
+]
