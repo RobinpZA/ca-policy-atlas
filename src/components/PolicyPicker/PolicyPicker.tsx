@@ -4,8 +4,10 @@ import {
   useAllPolicies,
   useAppState,
   useDispatch,
+  useSelectedPolicies,
   type FilterGroup,
 } from '../../state/appState.tsx';
+import { LoadPolicies } from '../ui/LoadPolicies.tsx';
 import type { NormalizedPolicy } from '../../domain/types.ts';
 
 const CATEGORIES = ['Prerequisite', 'User', 'Device', 'Location'] as const;
@@ -32,6 +34,28 @@ function matches(p: NormalizedPolicy, q: string): boolean {
   return hay.includes(q);
 }
 
+function Chips({ group, options }: { group: FilterGroup; options: readonly string[] }) {
+  const { filters } = useAppState();
+  const dispatch = useDispatch();
+  const active = filters[group];
+
+  return (
+    <div className="chips">
+      {options.map((value) => (
+        <button
+          key={value}
+          type="button"
+          className="chip"
+          aria-pressed={active.includes(value)}
+          onClick={() => dispatch({ type: 'toggleFilter', group, value })}
+        >
+          {value}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ChipRow({
   legend,
   group,
@@ -41,27 +65,103 @@ function ChipRow({
   group: FilterGroup;
   options: readonly string[];
 }) {
-  const { filters } = useAppState();
-  const dispatch = useDispatch();
-  const active = filters[group];
-
   return (
     <fieldset className="filter-block" style={{ border: 0, margin: 0, padding: 0 }}>
       <legend className="filter-legend">{legend}</legend>
-      <div className="chips">
-        {options.map((value) => (
-          <button
-            key={value}
-            type="button"
-            className="chip"
-            aria-pressed={active.includes(value)}
-            onClick={() => dispatch({ type: 'toggleFilter', group, value })}
-          >
-            {value}
-          </button>
-        ))}
-      </div>
+      <Chips group={group} options={options} />
     </fieldset>
+  );
+}
+
+/**
+ * A filter group that stays folded until asked for.
+ *
+ * Intent alone has fifteen values. Rendered open, the filters pushed the policy list -
+ * the thing you actually came to use - almost entirely off the bottom of the rail.
+ */
+function ChipFold({
+  legend,
+  group,
+  options,
+}: {
+  legend: string;
+  group: FilterGroup;
+  options: readonly string[];
+}) {
+  const { filters } = useAppState();
+  const count = filters[group].length;
+
+  return (
+    <details className="filter-fold" open={count > 0}>
+      <summary>
+        <span>
+          {legend}
+          {count > 0 ? <span className="filter-count"> {count}</span> : null}
+        </span>
+      </summary>
+      <Chips group={group} options={options} />
+    </details>
+  );
+}
+
+/**
+ * The columns on the board, in board order, pinned above the list.
+ *
+ * Selected rows used to exist only in place inside the filtered list, so a search could
+ * hide a column you were comparing and nothing on screen said what the columns were.
+ * Filters apply to the list below this; they never touch the selection.
+ */
+function SelectedTray() {
+  const selected = useSelectedPolicies();
+  const dispatch = useDispatch();
+  if (selected.length === 0) return null;
+
+  return (
+    <section className="rail-selected" aria-label="Selected policies">
+      <div className="rail-selected-head">
+        <span className="eyebrow">
+          Selected · {selected.length} / {MAX_COLUMNS}
+        </span>
+        <button
+          type="button"
+          className="btn btn-quiet btn-sm"
+          onClick={() => dispatch({ type: 'clear' })}
+        >
+          Clear
+        </button>
+      </div>
+      <ol className="selected-list">
+        {selected.map((p, i) => (
+          <li key={p.policyKey} className="selected-item">
+            <span className="selected-col" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span className="selected-text">
+              <span className="policy-id">
+                <span>{p.id}</span>
+                {p.source === 'tenant' ? (
+                  <span className="tenant-flag">loaded</span>
+                ) : (
+                  <span>{p.baselineKey}</span>
+                )}
+              </span>
+              <span className="selected-name" title={p.fullName ?? p.name}>
+                {p.name}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="btn btn-quiet btn-sm selected-remove"
+              aria-label={`Remove ${p.id} from the comparison`}
+              title="Remove from the comparison"
+              onClick={() => dispatch({ type: 'toggle', key: p.policyKey })}
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -107,20 +207,23 @@ export function PolicyPicker() {
           value={state.query}
           onChange={(e) => dispatch({ type: 'query', value: e.target.value })}
         />
+        {/* Loading adds policies to this list, so the control lives with the list. */}
+        <LoadPolicies />
         <ChipRow
           legend="Baseline"
           group="baseline"
           options={state.loaded.length ? [...baselineKeys, 'Loaded'] : baselineKeys}
         />
-        <ChipRow legend="Category" group="category" options={CATEGORIES} />
-        <ChipRow legend="Priority" group="priority" options={PRIORITIES} />
-        <ChipRow legend="Intent" group="intent" options={intents} />
+        <ChipFold legend="Category" group="category" options={CATEGORIES} />
+        <ChipFold legend="Priority" group="priority" options={PRIORITIES} />
+        <ChipFold legend="Intent" group="intent" options={intents} />
       </div>
+
+      <SelectedTray />
 
       <div className="rail-count">
         <span>
           {visible.length} of {all.length}
-          {state.selection.length > 0 ? ` · ${state.selection.length} selected` : ''}
         </span>
         {hasFilters ? (
           <button
@@ -134,15 +237,23 @@ export function PolicyPicker() {
         ) : null}
       </div>
 
-      <ul className="policy-list" role="listbox" aria-multiselectable="true" aria-label="Policies">
+      {/* A plain list of toggles, NOT role="listbox".
+       *
+       * It was a listbox of role="option" items each wrapping a <button>, which axe
+       * fails twice over: a focusable control inside an option is nested-interactive,
+       * and aria-selected is not an allowed attribute on a button. A listbox also
+       * promises arrow-key roving focus that this list does not implement. What each row
+       * actually is, is a checkbox - so it says so, and Tab/Space behave as expected. */}
+      <ul className="policy-list" aria-label="Policies">
         {visible.map((p) => {
           const selected = state.selection.includes(p.policyKey);
           return (
-            <li key={p.policyKey} role="option" aria-selected={selected}>
+            <li key={p.policyKey}>
               <button
                 type="button"
                 className="policy-row"
-                aria-selected={selected}
+                role="checkbox"
+                aria-checked={selected}
                 disabled={!selected && atCap}
                 title={
                   !selected && atCap

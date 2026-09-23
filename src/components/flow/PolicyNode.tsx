@@ -1,6 +1,9 @@
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { PolicyNodeData, NodeRow } from '../../domain/graph/buildGraph.ts';
-import type { Expectation } from '../../domain/types.ts';
+import { uncomparedLabel, uncomparedPaths, type Expectation } from '../../domain/types.ts';
+import { useRef } from 'react';
+import { useFocusActions } from '../../state/focus.tsx';
+import { useReportHeight } from '../../state/measure.tsx';
 
 type PolicyFlowNode = Node<PolicyNodeData, 'policy'>;
 
@@ -79,7 +82,10 @@ function describe(data: PolicyNodeData): string {
   const { title, kind, status, rows, terminal } = data;
   if (kind === 'ghost') return `${title}: not specified by this policy.`;
   if (kind === 'terminal') return `Outcome: ${terminal?.title ?? ''}. ${terminal?.sub ?? ''}`.trim();
-  if (kind === 'head') return `Policy ${data.policy.id}, ${data.policy.name}.`;
+  if (kind === 'head') {
+    const n = uncomparedPaths(data.policy).length;
+    return `Policy ${data.policy.id}, ${data.policy.name}.${n ? ` ${uncomparedLabel(n)}.` : ''}`;
+  }
 
   const parts = rows.map((r) => {
     const values =
@@ -107,25 +113,44 @@ function describe(data: PolicyNodeData): string {
   return `${title}. ${parts.join('. ')}. ${statusWord}`.trim();
 }
 
-export function PolicyNode({ data }: NodeProps<PolicyFlowNode>) {
-  const { kind, status, rows, policy, terminal, title } = data;
+export function PolicyNode({ id, data }: NodeProps<PolicyFlowNode>) {
+  const { kind, status, rows, policy, terminal, title, columnIndex, rankIndex, nodeKey } = data;
+  const uncompared = kind === 'head' ? uncomparedPaths(policy) : [];
+  const { setRank } = useFocusActions();
+  const ref = useRef<HTMLDivElement>(null);
+  useReportHeight(id, ref);
+
+  // Keyboard only. The POINTER half of the cross-column highlight is wired on the
+  // <ReactFlow> element via onNodeMouseEnter, not here: React Flow sets
+  // `pointer-events: none` on a node wrapper unless the node is selectable, draggable,
+  // or the flow itself carries node mouse handlers - and this board is none of the
+  // first two. A pointer handler on this div is therefore never called.
+  const enter = () => setRank(nodeKey);
+  const leave = () => setRank(null);
 
   return (
     <div
+      ref={ref}
       className="pnode"
       data-kind={kind}
       data-status={status}
       data-tone={terminal?.tone}
-      tabIndex={0}
+      data-col={columnIndex}
+      data-rank={rankIndex}
+      data-rank-key={nodeKey}
+      tabIndex={kind === 'ghost' ? -1 : 0}
       role="group"
       aria-label={describe(data)}
       aria-disabled={kind === 'ghost' || undefined}
+      onFocus={enter}
+      onBlur={leave}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} />
 
       {kind === 'head' ? (
         <>
           <div className="pnode-eyebrow">
+            <span className="pnode-tick" aria-hidden="true" />
             <span>{policy.source === 'tenant' ? 'loaded' : policy.baselineKey}</span>
             <span>{policy.id}</span>
           </div>
@@ -136,6 +161,14 @@ export function PolicyNode({ data }: NodeProps<PolicyFlowNode>) {
             {policy.profileLevel ? <span>{policy.profileLevel}</span> : null}
             {policy.state ? <span>{policy.state}</span> : null}
             <span>{policy.policyIntent ?? 'Unclassified'}</span>
+            {uncompared.length > 0 ? (
+              <span
+                className="pnode-uncompared"
+                title={`Present in the source, not modelled, so not compared:\n${uncompared.join('\n')}`}
+              >
+                {uncomparedLabel(uncompared.length)}
+              </span>
+            ) : null}
           </div>
         </>
       ) : null}

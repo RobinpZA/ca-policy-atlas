@@ -1,5 +1,34 @@
 [
   {
+    "date": "2026-09-19",
+    "verb": "redesign",
+    "macrostructure": "Workbench",
+    "theme": "lumen",
+    "drop": "night",
+    "theme_axes": "dark / roman-serif / warm",
+    "vibe": "instrument panel, brass on violet-black",
+    "nav": "N3 side-rail",
+    "footer": "none (app shell)",
+    "enrichment": "none - typography and geometry only",
+    "tone": "utilitarian",
+    "brief": "CA Policy Atlas - user asked for something closer to Lumen or Aurora",
+    "note": "Picked Lumen over Aurora: Aurora's signature ambient blooms conflict directly with this app's own 'no glow on a dark surface' rule, and Lumen's documented 'codebase graph / topology' apparatus already describes what this board's React Flow graph does natively, so no decorative apparatus was added on top of the real one. Scope was deliberately capped at palette + type per the user - the diff-encoding mechanics (one accent, bar-width emphasis, opaque token stepping for agreement, terminal fill+weight+bar) are untouched. Display face stayed Newsreader rather than switching to Lumen's canonical Instrument Serif: buildGraph.ts hand-computes node layout heights from a per-character glyph-width table measured against the live rendered font (NEWSREADER_EM), and this repo has no headless-browser harness to re-measure it safely - swapping the face without re-measuring risks reintroducing the 461-node overlap bug fixed on 2026-09-19's earlier entry. Switzer swapped to Geist (Lumen's documented UI sans) since body text carries no layout-critical measurements. Paper hue moved 60 (warm-neutral) to 265 (cool-violet, Lumen's Night Foundry canvas); accent moved from ember amber (H55) to molten brass (H50), clamped to the nearest in-gamut chroma since Lumen's spec value (C 0.17 at L 76%) clips in sRGB. Every contrast ratio re-measured OKLCH -> linear sRGB -> WCAG."
+  },
+  {
+    "date": "2026-09-19",
+    "verb": "redesign",
+    "macrostructure": "Workbench",
+    "theme": "custom",
+    "theme_axes": "dark / roman-serif / warm",
+    "vibe": "printed field manual, annotated in ink",
+    "nav": "N3 side-rail",
+    "footer": "none (app shell)",
+    "enrichment": "none - typography and geometry only",
+    "tone": "utilitarian",
+    "brief": "CA Policy Atlas - re-pick after the Instrument theme read flat",
+    "note": "Replaced the custom Instrument theme (dark / humanist-sans / cool azure). Instrument's encoding was correct but every channel it used was a hairline or an opacity step, so the board rendered as grey text on grey bands and the accent was a 2px border nobody saw. Field Manual differs from Instrument on display style AND accent hue, and from M365-Change-Radar's Midnight (dark / grotesk-sans / warm) on display style. Dark paper is a house rule, so the paper band was never a variable. The load-bearing move is the roman serif on the heads plus giving facet nodes a real surface; the accent footprint actually FELL, from 0.86% to 0.74%. Superseded 2026-09-19 by the Lumen re-theme above."
+  },
+  {
     "date": "2026-09-18",
     "macrostructure": "Workbench",
     "genre": "modern-minimal",
@@ -11,6 +40,6 @@
     "enrichment": "none - typography and geometry only",
     "tone": "utilitarian",
     "brief": "CA Policy Atlas - React Flow comparison of Entra Conditional Access baselines",
-    "note": "Custom rather than catalog: dark-mode-only rules out the light-paper themes; Midnight is in service on M365-Change-Radar; Terminal is mono-only, which would destroy the mono-vs-sans channel this app uses to separate literal policy values from its own prose."
+    "note": "Custom rather than catalog: dark-mode-only rules out the light-paper themes; Midnight is in service on M365-Change-Radar; Terminal is mono-only, which would destroy the mono-vs-sans channel this app uses to separate literal policy values from its own prose. Superseded 2026-09-19."
   }
 ]

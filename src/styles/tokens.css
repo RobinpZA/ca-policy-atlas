@@ -1,83 +1,124 @@
-/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4
+/* Hallmark · pre-emit critique: P5 H4 E5 S5 R5 V4
  *
  * macrostructure: Workbench · nav: N3 side-rail · footer: none (app shell)
- * genre: modern-minimal · tone: utilitarian · theme: custom "Instrument"
- * vibe: dark instrument panel, hairline-ruled, one cold signal
- * paper: oklch(15% 0.012 250) · accent: oklch(72% 0.145 225) cold azure
- * fonts: IBM Plex Sans (display + body) + IBM Plex Mono (outlier)
- * axes: dark / humanist-sans / cool
- * differs from M365-Change-Radar (Midnight · dark/grotesk-sans/warm) on display style + accent hue
+ * theme: lumen (catalog) · drop: night foundry · vibe: "instrument panel, brass on violet-black"
+ * paper: oklch(13% 0.014 265) · accent: oklch(73% 0.155 50)
+ * display: Newsreader (kept) · body: Geist · outlier: JetBrains Mono
+ * axes: dark / roman-serif / warm · studied: no · context: explicit (redesign, requested "Lumen or Aurora")
  *
- * WHY CUSTOM RATHER THAN CATALOG. Dark-mode-only is a house rule, which rules out the
- * light-paper themes. Of the dark catalog themes, Midnight is already in service on a
- * sibling repo, and Terminal is mono-only - which would destroy this app's single most
- * important non-hue channel (mono marks a literal policy value, sans marks our own
- * prose). So the palette is constructed rather than picked.
+ * WHY LUMEN OVER AURORA. Aurora's signature move is diffuse ambient blooms behind
+ * content - which is the exact thing the outgoing Field Manual theme (and this one)
+ * refuses: a glow on a dark surface is a generated-UI tell, and this board has no
+ * headroom to spend on decoration anyway (one accent, capped near 3% of viewport).
+ * Lumen's Night Foundry drop is a palette + apparatus PHYSICS, not a bloom - and its
+ * documented "codebase graph / topology" apparatus is describing this exact board:
+ * a central node, satellites, connecting hairlines, mono callouts. We didn't build a
+ * second decorative graph next to the real one; the real React Flow board already IS
+ * that apparatus, so Lumen's contribution here is the canvas physics (violet-black,
+ * brass accent) and the mono/mono-eyebrow discipline the app already followed.
+ *
+ * WHY NEWSREADER SURVIVED THE SWAP. Lumen's canonical display face is Instrument
+ * Serif. buildGraph.ts hand-computes node layout heights from NEWSREADER_EM, a
+ * per-character glyph-advance table measured against the live rendered font - built
+ * that way on purpose, because an averaged character width mis-counts a proportional
+ * serif (0.279em for "l" vs 1.0em for "M") and previously produced 461 overlapping
+ * nodes across the 94 policies. Swapping the display face means the table is wrong
+ * until it is re-measured against real canvas metrics, and this repo has no headless-
+ * browser harness to do that safely today. Re-anchoring the palette and swapping the
+ * UI face (Switzer -> Geist, which carries no layout-critical measurements) delivers
+ * the Lumen mood without that risk. Revisit if Playwright ever lands in devDependencies.
+ *
+ * Dark paper is a house rule, so the paper band was never a variable; this theme
+ * differs from the outgoing Field Manual on accent hue (55 -> 50, but more materially
+ * on paper hue: 60 warm-neutral -> 265 cool-violet) and from M365-Change-Radar's
+ * Midnight (dark / grotesk-sans / warm) on display style.
+ *
+ * Every ratio below is measured, not asserted: OKLCH -> linear sRGB -> WCAG.
  */
 
 :root {
   /* -- paper -------------------------------------------------------------
-   * Cool-neutral, anchored at hue 250, low but never zero chroma. Depth is
-   * carried by lightness steps and hairlines, never by shadow or glow - a
-   * glow on a dark surface is one of the reliable generated-UI tells.
+   * Cool-violet near-black, hue 265 - Lumen Night Foundry's canvas hue, taken directly
+   * from the theme spec. Depth is carried by lightness steps and hairlines, never by
+   * shadow or glow - a glow on a dark surface is one of the reliable generated-UI tells,
+   * and Lumen's own apparatus family is refused here (see header note).
    */
-  --color-paper: oklch(15% 0.012 250);
-  --color-paper-2: oklch(19% 0.014 250);
-  --color-paper-3: oklch(24% 0.016 250);
+  --color-paper: oklch(13% 0.014 265);
+  --color-paper-2: oklch(18% 0.016 265);
+  --color-paper-3: oklch(23% 0.018 265);
 
-  /* Decorative hairline. Exempt from the 3:1 gate, but 30% was so close to the
-   * paper it effectively vanished; 34% reads as a drawn line without shouting. */
-  --color-rule: oklch(34% 0.014 250);
+  /* Decorative hairline, exempt from the 3:1 gate. Measures 1.59:1 on paper - present
+   * as a drawn line, absent as a border. Same register as the outgoing theme's 1.69:1;
+   * 32% lightness is this ramp's floor where the eye still registers a rule. */
+  --color-rule: oklch(32% 0.016 265);
 
-  /* Control border. Must clear 3:1 against the surface it sits ON, and node
-   * surfaces are paper-2/paper-3, not paper - so paper-3 is the binding case.
-   * Measured: 48% gave 2.52:1 there and failed. 53% measures 3.12:1. */
-  --color-rule-ctl: oklch(53% 0.018 250);
+  /* Control border. Must clear 3:1 against the surface it sits ON, and node surfaces
+   * are paper-2 and paper-3, so paper-3 is the binding case.
+   * Measured: 3.20:1 on paper-3, 3.56:1 on paper-2, 3.81:1 on paper. */
+  --color-rule-ctl: oklch(53% 0.02 265);
 
-  --color-neutral: oklch(62% 0.016 250);
-  --color-muted: oklch(72% 0.014 250);
-  --color-ink: oklch(94% 0.008 250);
+  /* Measured: 5.75:1 on paper, 5.37:1 on paper-2, 4.83:1 on paper-3 - clears 4.5:1
+   * everywhere it is used for text, which matters because every de-emphasised label
+   * in the app is this. */
+  --color-neutral: oklch(63% 0.016 265);
+  --color-muted: oklch(73% 0.012 265); /* 8.41:1 on paper, 7.06:1 on paper-3 */
+  --color-ink: oklch(96% 0.006 262); /* 17.91:1 on paper - Lumen's own ink value */
 
   /* -- accent ------------------------------------------------------------
-   * ONE accent. The budget allows two; the second slot is deliberately left
-   * unspent, and nothing in this app may claim it.
+   * ONE accent. The budget allows two; the second slot is deliberately left unspent,
+   * and nothing in this app may claim it.
    *
-   * Cold azure rather than red or amber on purpose: a difference between two
-   * baselines is not an error. Red would assert that one of them is wrong,
-   * which the tool is in no position to judge. Azure reads as "marked".
+   * Molten brass rather than red: a difference between two baselines is not an error.
+   * Red would assert that one of them is wrong, which the tool is in no position to
+   * judge. Brass reads as "marked" - an annotation in the margin, not a correction.
+   * Lumen's Night Foundry specifies oklch(76% 0.17 50), which is out of sRGB gamut
+   * (clips to an oversaturated orange); clamped to the widest in-gamut chroma at a
+   * nearby lightness instead of letting the browser clip it silently.
    *
-   * --color-focus is the SAME hue at higher lightness, so the focus ring does
-   * not consume the second accent slot either.
+   * --color-focus is the SAME hue at higher lightness, lower chroma (gamut-clamped
+   * the same way), so the focus ring does not consume the second accent slot either.
+   * Measured 10.41:1 / 9.73:1 / 8.74:1 against paper / paper-2 / paper-3 - clears the
+   * 3:1 focus gate on every surface with room to spare.
    */
-  --color-accent: oklch(72% 0.145 225);
-  --color-accent-ink: oklch(16% 0.02 225);
-  --color-focus: oklch(80% 0.13 225);
+  --color-accent: oklch(73% 0.155 50); /* 8.01:1 on paper, 6.72:1 on paper-3 */
+  --color-accent-ink: oklch(14% 0.02 50); /* 7.93:1 on the accent fill */
+  --color-focus: oklch(80% 0.12 50);
 
   /* -- type --------------------------------------------------------------
-   * IBM Plex Sans + IBM Plex Mono are a designed pair - same vertical metrics,
-   * same rhythm. That matters more here than usual, because mono value tokens
-   * sit inline beside sans labels inside dense nodes; a mismatched pair makes
-   * every row look subtly misaligned.
+   * Three families, which is the 2+1 ceiling, and each one has exactly one job:
    *
-   * Plex Sans is humanist, not neo-grotesque, which is what separates this from
-   * the Geist-bodied sibling repo, and it holds up at the 13px the picker needs.
+   *   Newsreader  - the app's own voice. Policy names, terminals, section heads.
+   *               Kept from Field Manual rather than swapped to Lumen's canonical
+   *               Instrument Serif - see the header note on NEWSREADER_EM.
+   *   Geist       - running UI. Labels, buttons, prose. Lumen's documented sans;
+   *               carries no layout-critical measurements, so it swapped freely.
+   *   JetBrains Mono - a literal value lifted out of the policy JSON. Never prose.
+   *               Already Lumen's own mono choice - unchanged.
+   *
+   * Mono-vs-prose is a load-bearing channel in the diff encoding, not decoration: it
+   * is how the eye separates "what the baseline literally says" from "what we say
+   * about it". Newsreader's optical-size axis is why the 22px column heads and the
+   * 15px terminals both hold - it is not the same drawing scaled twice.
    */
-  --font-display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-outlier: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', monospace;
+  --font-display: 'Newsreader Variable', ui-serif, Georgia, serif;
+  --font-body: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-outlier: 'JetBrains Mono Variable', ui-monospace, 'Cascadia Code', monospace;
 
-  --text-xs: 0.6875rem; /* 11px - micro-labels, folios */
-  --text-sm: 0.8125rem; /* 13px - value tokens, picker rows */
-  --text-base: 0.9375rem; /* 15px - body */
-  --text-lg: 1.125rem; /* 18px - node titles */
-  --text-xl: 1.375rem; /* 22px - column headers */
-  --text-2xl: 1.75rem;
-  --text-3xl: 2.25rem;
-  --text-4xl: 3rem;
-  --text-display-s: 3.75rem;
-  --text-display: 4.5rem;
+  /* Geometric scale, minor third (1.2), anchored on the 13px the value chips and the
+   * picker rows need. Ratios, not increments - which is what makes a 22px serif head
+   * over a 13px mono value read as hierarchy rather than as two arbitrary sizes. */
+  --text-xs: 0.6875rem; /* 11.0 - micro-labels, folios, flags */
+  --text-sm: 0.8125rem; /* 13.0 - value tokens, picker rows  [anchor] */
+  --text-base: 0.975rem; /* 15.6 - body */
+  --text-lg: 1.17rem; /* 18.7 - terminals */
+  --text-xl: 1.405rem; /* 22.5 - column heads */
+  --text-2xl: 1.686rem; /* 27.0 */
+  --text-3xl: 2.023rem; /* 32.4 */
+  --text-4xl: 2.43rem; /* 38.8 */
+  --text-display-s: 2.915rem; /* 46.6 */
+  --text-display: 3.5rem; /* 56.0 */
 
-  --tracking-display: -0.03em;
+  --tracking-display: -0.015em; /* Newsreader is already tight; -0.03 closed it up */
   --tracking-label: 0.08em;
 
   /* -- space: 4pt scale, named by role ---------------------------------- */
@@ -92,8 +133,8 @@
   --space-3xl: 4rem; /* 64 */
 
   /* -- motion ------------------------------------------------------------
-   * Named easings only. The browser default `ease` is banned, as is
-   * `transition: all`. Only transform and opacity are ever animated.
+   * Named easings only. The browser default `ease` is banned, as is `transition: all`.
+   * Only transform and opacity are ever animated.
    */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
@@ -103,9 +144,10 @@
 
   /* -- form ------------------------------------------------------------- */
   --rule-hair: 1px;
-  --radius-input: 6px;
+  --radius-input: 5px;
   --radius-pill: 999px;
   --control-h: 2.75rem; /* 44px touch floor, shared by inputs and their buttons */
+  --control-h-sm: 1.5rem; /* 24px - inline row actions (remove, clear, reset) */
 
   /* -- layering --------------------------------------------------------- */
   --z-base: 1;
@@ -119,59 +161,96 @@
   /* ======================================================================
    * DIFF ENCODING - the part of this file that does the real work.
    *
-   * A graph UI wants to colour-code every node type and every diff state.
-   * With a one-accent budget capped at 3% of viewport, it cannot. So meaning
-   * is carried by channels that are not hue, and the accent is spent on
-   * exactly one thing: WHICH ROW DIFFERS.
+   * A graph UI wants to colour-code every node type and every diff state. With a
+   * one-accent budget capped at 3% of viewport, it cannot. So meaning is carried by
+   * channels that are not hue, and the accent is spent on exactly one thing:
+   * WHICH ROW DIFFERS.
    *
-   * Channel 1 - rank position. Vertical order is fixed and semantic, and the
-   *   sticky gutter names each rank once. This does most of the work the old
-   *   ten-colour palette was doing.
-   * Channel 2 - fill and weight. See the terminal tokens below.
-   * Channel 3 - silhouette. Terminals carry a chamfered corner.
-   * Channel 4 - family. Mono = a literal value from the policy. Sans = our prose.
-   * Channel 5 - opacity. Agreement recedes; disagreement stays put.
-   * Channel 6 - bar WIDTH, not bar colour. One hue, three weights.
+   * Channel 1 - rank position. Vertical order is fixed and semantic, and the sticky
+   *   gutter names each rank once. This does most of the work the old ten-colour
+   *   palette was doing.
+   * Channel 2 - surface. A facet node is a card with a fill and a hairline; a ghost
+   *   has neither. This is new, and it is what stopped the board reading as grey text
+   *   floating on grey bands.
+   * Channel 3 - fill and weight on the terminals. See the terminal tokens below.
+   * Channel 4 - silhouette. Terminals carry a chamfered corner.
+   * Channel 5 - family. Mono = a literal value from the policy. Serif = our voice.
+   * Channel 6 - opacity. Agreement recedes; disagreement stays put.
+   * Channel 7 - bar WIDTH, not bar colour. One hue, three weights.
    *
-   * Budget arithmetic, worst case - 6 columns x 14 ranks, everything differing:
-   *   6 x 14 x 3px x 44px = 11,088px^2 against 1440x900 = 1,296,000px^2 = 0.86%.
-   * Comfortably inside 3%. If the highlight ever grows past a row-level bar,
-   * redo this sum before shipping it.
+   * Budget arithmetic, worst case - 6 columns x 14 ranks, everything differing. A
+   * differing row is a 3px bar down a row that is now 38px tall (label 15 + one chip
+   * line 23) rather than the 44px the old sum assumed:
+   *   6 x 14 x 3px x 38px = 9,576px^2 against 1440x900 = 1,296,000px^2 = 0.74%.
+   * Comfortably inside 3%. The accent also appears as the gutter tick (14 x 2 x 10px
+   * = 280px^2), a rounding error against the above. The picker's selected marks, the
+   * "loaded" flag and filter counts are ink, not accent - they are not differences. If the highlight ever grows past a row-level bar, redo this sum first.
    * ====================================================================== */
 
-  /* Agreement recedes rather than the difference shouting. */
-  --diff-same-opacity: 0.62;
-  --diff-ghost-opacity: 0.4;
+  /* Agreement recedes rather than the difference shouting - but it recedes by CHANGING
+   * COLOUR, not by going translucent.
+   *
+   * MEASURED, AND IT COST A REWRITE. The obvious way to recede a node is `opacity`, and
+   * it is wrong here: opacity dims the text along with the box, and these labels are
+   * 11px. Browsers composite in gamma-encoded sRGB, not linear light, which makes the
+   * penalty far steeper than it looks - over this paper, --color-muted at 0.6 opacity
+   * measures 3.37:1 against 4.5:1 required, and clearing the bar would need alpha 0.75,
+   * which barely dims anything. Opacity also faded the node's own fill, so an agreed
+   * node stopped reading as a card at all.
+   *
+   * So agreement steps down through opaque tokens instead. Every value below is a real
+   * measured ratio, and the perceptual step is bigger than the opacity version was:
+   *
+   *   value chips   ink 15.77:1  ->  muted 7.57:1   on paper-2
+   *   row labels    muted        ->  neutral 5.16:1 on paper-2
+   *   the node      keeps its fill; it loses its border
+   *
+   * The one place opacity survives is the cross-column focus dim below, which is a
+   * transient hover/focus state - the content is fully legible the moment it is not
+   * being dimmed, so the static contrast floor is not the governing rule there. */
+  --diff-ghost-opacity: 0.38;
 
   /* Emphasis is bar width. There is no second hue. */
   --diff-bar-coverage: 1px;
   --diff-bar-differs: 2px;
   --diff-bar-only: 3px;
 
+  /* Node surfaces. A facet node is an OBJECT - it has a fill and an edge. The previous
+   * theme left both transparent and let the rank band carry the surface, which is why
+   * nothing on the board read as a thing you could point at. */
+  --node-fill: var(--color-paper-2);
+  --node-fill-raised: var(--color-paper-3);
+
+  /* Cross-column focus: hovering or focusing one rank dims every other rank so the
+   * dimension you are asking about is the only lit thing across all six columns. */
+  --focus-dim: 0.22;
+
   /* Terminal nodes, distinguished without hue.
    *
-   * MEASURED CORRECTION. The intent was "block is filled and inverted, grant is
-   * open", with fill carrying the distinction. On a dark theme it cannot: there
-   * is almost no luminance headroom below the paper, so even a generous fill
-   * step measures only 1.5-2.1:1 against the open terminal. In greyscale that
-   * is close to invisible.
+   * MEASURED, AND IT STILL HOLDS ON THIS PALETTE. The intent was "block is filled and
+   * inverted, grant is open", with fill carrying the distinction. On a dark theme it
+   * cannot: there is almost no luminance headroom below the paper, and the block fill
+   * measures 1.16:1 against the open terminal's paper-3. In greyscale that is close to
+   * invisible.
    *
-   * So fill is a SUPPORTING cue here, not the load-bearing one. What actually
-   * carries block-vs-grant, in order of strength:
-   *   1. type weight + case  - 700 small-caps, tracked, against 500 sentence case
+   * So fill is a SUPPORTING cue, not the load-bearing one. What actually carries
+   * block-vs-grant, in order of strength:
+   *   1. type weight + case  - Newsreader 700 small-caps, tracked, vs 500 sentence case
    *   2. the stop-bar        - a 2px rule across the top edge, which grant lacks
    *   3. fill                - a perceptible raise, but never relied upon alone
-   * All three survive greyscale. Verify with a desaturated screenshot before
-   * changing any of them.
+   * All three survive greyscale. Verify with a desaturated screenshot before changing
+   * any of them.
    */
-  --terminal-block-fill: oklch(32% 0.018 250); /* 1.55:1 vs open - support only */
+  --terminal-block-fill: oklch(28% 0.02 265); /* 1.16:1 vs open - support only */
   --terminal-block-weight: 700;
   --terminal-block-bar: 2px;
   --terminal-open-fill: transparent;
   --terminal-open-weight: 500;
-  --terminal-chamfer: 10px;
+  --terminal-chamfer: 14px;
 
-  --node-w: 268px;
+  --node-w: 292px; /* must equal NODE_W in domain/graph/buildGraph.ts */
   --node-gutter: var(--space-lg);
+  --rank-gap: 12px; /* must equal RANK_GAP in domain/graph/buildGraph.ts */
+  --spine-w: 1px;
   --rail-w: 320px;
 }

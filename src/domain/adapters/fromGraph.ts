@@ -14,9 +14,12 @@
 
 import { extractFacets } from '../extractFacets.ts';
 import { isPlainObject, setPath } from '../objectPath.ts';
-import type { NormalizedPolicy, PolicyState, RawObject, RawValue } from '../types.ts';
+import type { Anomaly, NormalizedPolicy, PolicyState, RawObject, RawValue } from '../types.ts';
 
-/** Graph fields that are real but carry no comparable design intent. */
+/**
+ * Raw Graph paths that are real but carry no comparable design intent. Checked against
+ * the SOURCE object by `rawCensus` - the canonical object never contains them.
+ */
 const IGNORED: ReadonlySet<string> = new Set([
   'id',
   'displayName',
@@ -27,19 +30,27 @@ const IGNORED: ReadonlySet<string> = new Set([
   'state',
   'templateId',
   'partialEnablementStrategy',
-  'grantControls.authenticationStrength.id',
-  'grantControls.authenticationStrength.displayName',
-  'grantControls.authenticationStrength.description',
-  'grantControls.authenticationStrength.policyType',
-  'grantControls.authenticationStrength.createdDateTime',
-  'grantControls.authenticationStrength.modifiedDateTime',
-  'grantControls.authenticationStrength.allowedCombinations',
+  'sessionControls.signInFrequency.authenticationType',
+]);
+
+/**
+ * Raw Graph paths read by a dedicated reshaper below rather than by COPY_PAIRS. The
+ * prefixes are whole objects identified as one unit (a strength by its id, guest
+ * targeting as one flattened set).
+ */
+const CONSUMED_PATHS: ReadonlySet<string> = new Set([
   'sessionControls.signInFrequency.value',
   'sessionControls.signInFrequency.type',
-  'sessionControls.signInFrequency.authenticationType',
   'sessionControls.signInFrequency.frequencyInterval',
-  'deviceState.deviceFilterMode',
+  'conditions.devices.deviceFilter.mode',
+  'conditions.devices.deviceFilter.rule',
+  'conditions.authenticationFlows.transferMethods',
 ]);
+const CONSUMED_PREFIXES: readonly string[] = [
+  'grantControls.authenticationStrength.',
+  'conditions.users.includeGuestsOrExternalUsers.',
+  'conditions.users.excludeGuestsOrExternalUsers.',
+];
 
 const COPY_PAIRS: ReadonlyArray<readonly [from: string, to: string]> = [
   ['conditions.applications.includeApplications', 'applications.includeApplications'],
@@ -56,8 +67,6 @@ const COPY_PAIRS: ReadonlyArray<readonly [from: string, to: string]> = [
   ['conditions.users.excludeGroups', 'users.excludeGroups'],
   ['conditions.users.includeRoles', 'users.includeRoles'],
   ['conditions.users.excludeRoles', 'users.excludeRoles'],
-  ['conditions.users.includeGuestsOrExternalUsers', 'users.includeGuestsOrExternalUsers'],
-  ['conditions.users.excludeGuestsOrExternalUsers', 'users.excludeGuestsOrExternalUsers'],
 
   ['conditions.clientAppTypes', 'clientAppTypes'],
   ['conditions.platforms.includePlatforms', 'platforms.includePlatforms'],
@@ -71,19 +80,11 @@ const COPY_PAIRS: ReadonlyArray<readonly [from: string, to: string]> = [
   ['conditions.insiderRiskLevels', 'conditions.insiderRiskLevels'],
   ['conditions.servicePrincipalRiskLevels', 'conditions.servicePrincipalRiskLevels'],
   ['conditions.agentIdRiskLevels', 'conditions.agentIdRiskLevels'],
-  [
-    'conditions.authenticationFlows.transferMethods',
-    'conditions.authenticationFlows.transferMethods',
-  ],
 
   ['grantControls.builtInControls', 'grantControls.builtInControls'],
   ['grantControls.operator', 'grantControls.operator'],
   ['grantControls.termsOfUse', 'grantControls.termsOfUse'],
   ['grantControls.customAuthenticationFactors', 'grantControls.customAuthenticationFactors'],
-  [
-    'grantControls.authenticationStrength.requirementsSatisfied',
-    'grantControls.authenticationStrength.requirementsSatisfied',
-  ],
 
   ['sessionControls.signInFrequency.isEnabled', 'sessionControls.signInFrequency.isEnabled'],
   ['sessionControls.persistentBrowser.isEnabled', 'sessionControls.persistentBrowser.isEnabled'],
@@ -125,9 +126,103 @@ function signInInterval(policy: RawObject): string | undefined {
   const value = sif['value'];
   const type = sif['type'];
   if (typeof value === 'number' && typeof type === 'string') {
-    return `${value} ${type}${value === 1 ? '' : ''}`;
+    // Graph's type is plural ("hours", "days"); singularise for a value of 1.
+    return `${value} ${value === 1 ? type.replace(/s$/, '') : type}`;
   }
   return undefined;
+}
+
+/** Graph flags enums serialise as one comma-separated string; the baselines use arrays. */
+const splitFlags = (v: string): string[] =>
+  v
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+function transferMethods(policy: RawObject): RawValue | undefined {
+  const v = read(policy, 'conditions.authenticationFlows.transferMethods');
+  if (typeof v === 'string') return splitFlags(v);
+  return v === null ? undefined : v;
+}
+
+/**
+ * The three built-in authentication strengths, by their fixed ids, mapped onto the values
+ * the baseline corpus uses. Graph's own `requirementsSatisfied` is `none | mfa` only, so
+ * it reports all three built-ins as "mfa" - reading it made phishing-resistant MFA
+ * indistinguishable from plain MFA.
+ */
+const BUILT_IN_STRENGTHS: Readonly<Record<string, string>> = {
+  '00000000-0000-0000-0000-000000000002': 'mfa',
+  '00000000-0000-0000-0000-000000000003': 'passwordlessMfa',
+  '00000000-0000-0000-0000-000000000004': 'phishingResistant',
+};
+
+/**
+ * Which strength a policy requires. A custom strength is named by the export's own
+ * displayName, never by us; with no name it stays a raw id.
+ */
+function authStrength(policy: RawObject): string | undefined {
+  const as = read(policy, 'grantControls.authenticationStrength');
+  if (!isPlainObject(as)) return undefined;
+  const id = typeof as['id'] === 'string' ? as['id'] : '';
+  const builtIn = BUILT_IN_STRENGTHS[id.toLowerCase()];
+  if (builtIn) return builtIn;
+  if (typeof as['displayName'] === 'string' && as['displayName']) return as['displayName'];
+  return id || undefined;
+}
+
+/**
+ * Graph's guest targeting is an object - a comma-separated type list plus the external
+ * tenants it covers - where the baselines assert a bare `true`. Flattened to one set:
+ * the guest types, then any enumerated tenant ids. `membershipKind: "all"` adds nothing,
+ * because covering every tenant is what an unrestricted type list already says.
+ */
+function guests(policy: RawObject, which: 'include' | 'exclude'): RawValue | undefined {
+  const g = read(policy, `conditions.users.${which}GuestsOrExternalUsers`);
+  if (!isPlainObject(g)) return undefined;
+  const typesRaw = g['guestOrExternalUserTypes'];
+  const types = typeof typesRaw === 'string' ? splitFlags(typesRaw) : [];
+  const ext = g['externalTenants'];
+  const members =
+    isPlainObject(ext) && ext['membershipKind'] === 'enumerated' && Array.isArray(ext['members'])
+      ? (ext['members'] as RawValue[]).filter((m): m is string => typeof m === 'string')
+      : [];
+  return [...types, ...members];
+}
+
+/** Every non-null leaf of the raw source, with its value. `@odata` annotations are skipped. */
+function rawLeaves(root: RawObject, prefix = ''): string[] {
+  const out: string[] = [];
+  for (const [k, v] of Object.entries(root)) {
+    if (k.includes('@odata')) continue;
+    if (v === null || v === undefined) continue;
+    const path = prefix ? `${prefix}.${k}` : k;
+    if (isPlainObject(v)) {
+      // An empty Graph container is structure, not an assertion.
+      if (Object.keys(v).length > 0) out.push(...rawLeaves(v, path));
+    } else {
+      out.push(path);
+    }
+  }
+  return out;
+}
+
+const COPIED_FROM: ReadonlySet<string> = new Set(COPY_PAIRS.map(([from]) => from));
+
+/**
+ * THE GUARD, for tenant input. extractFacets' own census sees only the reshaped object,
+ * which by construction holds nothing but what this adapter chose to copy - so a Graph
+ * field missing from COPY_PAIRS would vanish without a trace. This walks the SOURCE and
+ * reports every populated leaf nobody read.
+ */
+function rawCensus(raw: RawObject): Anomaly[] {
+  const anomalies: Anomaly[] = [];
+  for (const leaf of rawLeaves(raw)) {
+    if (IGNORED.has(leaf) || COPIED_FROM.has(leaf) || CONSUMED_PATHS.has(leaf)) continue;
+    if (CONSUMED_PREFIXES.some((p) => leaf.startsWith(p))) continue;
+    anomalies.push({ path: leaf, reason: 'unknown-path' });
+  }
+  return anomalies;
 }
 
 /** Graph expresses device targeting as a filter rule, not a boolean. */
@@ -154,7 +249,22 @@ export function normalizeGraphPolicy(raw: RawObject, index: number): NormalizedP
   const filter = deviceFilter(raw);
   if (filter) setPath(canonical, 'deviceState.deviceFilter', filter);
 
-  const { facets, anomalies } = extractFacets(canonical, { ignorePaths: IGNORED });
+  const flows = transferMethods(raw);
+  if (flows !== undefined) setPath(canonical, 'conditions.authenticationFlows.transferMethods', flows);
+
+  const strength = authStrength(raw);
+  if (strength) {
+    setPath(canonical, 'grantControls.authenticationStrength.requirementsSatisfied', strength);
+  }
+
+  const includeGuests = guests(raw, 'include');
+  if (includeGuests) setPath(canonical, 'users.includeGuestsOrExternalUsers', includeGuests);
+  const excludeGuests = guests(raw, 'exclude');
+  if (excludeGuests) setPath(canonical, 'users.excludeGuestsOrExternalUsers', excludeGuests);
+
+  const extracted = extractFacets(canonical);
+  const facets = extracted.facets;
+  const anomalies = [...extracted.anomalies, ...rawCensus(raw)];
 
   const id = typeof raw['id'] === 'string' ? raw['id'] : `loaded-${index + 1}`;
   const name =

@@ -1,6 +1,6 @@
 {
   "name": "ca-policy-atlas",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Visualize and compare Microsoft Entra Conditional Access baseline policies as side-by-side flow graphs.",
   "author": "Robin Pieterse · Turrito Networks",
@@ -25,6 +25,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/newsreader": "^5.3.0",
     "@types/node": "^26.6.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",

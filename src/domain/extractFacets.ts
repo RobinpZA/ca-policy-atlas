@@ -77,16 +77,7 @@ export interface ExtractResult {
   readonly anomalies: readonly Anomaly[];
 }
 
-export interface ExtractOptions {
-  /**
-   * Source leaf paths that are known and deliberately not modelled. Used by the Graph
-   * adapter for bookkeeping fields (id, displayName, createdDateTime...) so they do not
-   * masquerade as data we are silently dropping.
-   */
-  readonly ignorePaths?: ReadonlySet<string>;
-}
-
-export function extractFacets(pattern: RawObject, options: ExtractOptions = {}): ExtractResult {
+export function extractFacets(pattern: RawObject): ExtractResult {
   const mp = applyAliases(deepClone(pattern) as RawObject);
   const facets = new Map<string, Facet>();
   const anomalies: Anomaly[] = [];
@@ -128,11 +119,10 @@ export function extractFacets(pattern: RawObject, options: ExtractOptions = {}):
 
   // THE GUARD. Any leaf present in the source that no spec claims is a dimension this
   // build cannot see. Without this, refreshing a baseline file with a new condition
-  // would silently drop it and every comparison would quietly be wrong.
-  const ignore = options.ignorePaths;
+  // would silently drop it and every comparison would quietly be wrong. Tenant input
+  // gets a second census over its raw Graph shape - see rawCensus in fromGraph.ts.
   for (const leaf of leafPaths(mp)) {
     if (SPEC_PATHS.has(leaf)) continue;
-    if (ignore?.has(leaf)) continue;
     anomalies.push({ path: leaf, reason: 'unknown-path' });
   }
 

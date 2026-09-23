@@ -2,11 +2,39 @@
 
 Render Microsoft Entra Conditional Access policies as flow graphs, side by side, with every row where they disagree marked.
 
-Ships with 94 curated baseline policies from four frameworks — Van Surksum, Maester, CIS Microsoft 365 Foundations, and CISA SCuBA. You can also load your own exported policies.
+Ships with 94 curated baseline policies from four frameworks: Van Surksum (49), Maester (19), CIS Microsoft 365 Foundations (16) and CISA SCuBA (10). You can also load your own exported policies and measure them against any of those baselines.
+
+Runs entirely in the browser. No backend, no network calls at runtime.
+
+## Contents
+
+- [Quick start](#quick-start)
+- [What it is for](#what-it-is-for)
+- [Features](#features)
+- [Loading your own policies](#loading-your-own-policies)
+- [Privacy](#privacy)
+- [How a difference is decided](#how-a-difference-is-decided)
+- [Development](#development)
+- [Project layout](#project-layout)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Quick start
+
+Requires **Node.js 20.19+ or 22.12+** (Vite 7).
 
 ```bash
 npm install
 npm run dev
+```
+
+To produce a static build (output in `dist/`, hostable on any static web server):
+
+```bash
+npm run build
+npm run preview
 ```
 
 ---
@@ -17,7 +45,26 @@ The four baseline frameworks overlap heavily and disagree in small, consequentia
 
 Those differences are invisible in a table and invisible in a one-policy-at-a-time viewer. They are obvious when the graphs sit in adjacent columns with the differing rows lit up.
 
-Select one policy to read it. Select two or more to compare them.
+Select one policy to read it. Select two or more (up to six) to compare them.
+
+---
+
+## Features
+
+**Flow** is the default view: one column per selected policy, ranks aligned across columns so a dimension can be read sideways.
+
+- **Verdict strip.** Tells you the result before you read the board: how many dimensions are in play, how many the selection agrees on, and which ones disagree. Each disagreeing dimension is a button.
+- **Cross-column focus.** Hovering or focusing any node lights that dimension in every column and drops the rest back. "How do these six differ on Locations?" takes one gesture, not six reads.
+- **Differences only.** Hides every row the selection states identically. A fourteen-rank board usually has about three rows of real disagreement, and this shows just those.
+- **Keyboard navigation.** Tab into the board, then `↓`/`↑` to move down ranks, `←`/`→` to jump to the same rank in the next column, `Esc` to leave.
+
+**Table** shows the same diff as an accessible table. It explains in words why each row differs.
+
+**Coverage** answers the question people loading a tenant export usually have. Pick a baseline and, for each of its policies, see the closest loaded policy, how many requirements it meets and which it misses. A **Compare** button opens the pair side by side.
+
+**Export** saves the current comparison as CSV (UTF-8 BOM for Excel, formula-injection safe) or Markdown (policies, verdict, dimension table, notes).
+
+Selection, filters, view and the differences-only toggle are stored in the URL hash, so a comparison can be bookmarked or shared.
 
 ---
 
@@ -28,113 +75,124 @@ Select one policy to read it. Select two or more to compare them.
 ```powershell
 Connect-MgGraph -Scopes 'Policy.Read.All'
 Invoke-MgGraphRequest -Method GET `
-  -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' |
-  ConvertTo-Json -Depth 20 | Out-File policies.tenant.json
+  -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' `
+  -OutputType Json | Out-File policies.tenant.json
 ```
 
-**This is entirely client-side.** `FileReader` only — no upload, no telemetry, no analytics, no network call of any kind. Loaded policies are session-only, are never written to the URL hash, and `*.tenant.json` is gitignored. Sharing a comparison that includes loaded policies shares only the baseline columns.
+Save the export outside any synced or shared folder. The `.tenant.json` suffix is gitignored as a backstop.
 
-Because baselines frequently assert `true` ("configure this, the value is yours") while a real policy always has a concrete value, baseline-vs-tenant comparisons usually land on a *specificity* difference. That reads correctly: the baseline wants the dimension configured, and yours is configured thus.
+Baselines often assert `true` ("configure this, the value is yours"), but a real policy always has a concrete value. So baseline-vs-tenant comparisons usually land on a *specificity* difference. That reading is correct: the baseline wants the dimension configured, and yours has this particular value.
+
+Source fields the comparison cannot see are reported rather than dropped. "N not compared" appears on the column head and table header (hover for the paths) and in the load notice.
+
+---
+
+## Privacy
+
+- **Client-side only.** Files are read with `FileReader`. No upload, telemetry or analytics, and no network call of any kind. Fonts are bundled.
+- **Session-only.** Loaded policies are held in memory and gone on reload. They are never written to the URL hash or to browser storage.
+- **Sharing a link** shares the baseline columns, filters and any search text. It never includes loaded policies. Avoid searching for tenant-specific names in a link you plan to share.
+- **Exports include loaded policies.** The file is built in the browser and saved to your own disk.
 
 ---
 
 ## How a difference is decided
 
-Everything is reduced to a `FacetMap` — one entry per dimension a policy asserts — before anything is compared. Both the curated baselines and real Graph policies go through their own adapter into that same shape, which is why the tenant loader is a small feature rather than a second application.
+Everything is reduced to a `FacetMap` (one entry per dimension a policy asserts) before anything is compared. The curated baselines and real Graph policies each have their own adapter that produces the same shape. That is why the tenant loader is a small feature rather than a second application.
 
-A dimension's value is one of six things, and conflating any two of them produces a wrong answer:
+A dimension's value is one of six things, and treating any two as the same gives a wrong answer:
 
 | Form | Meaning |
 |---|---|
 | array | an explicit expectation |
 | bare string | a single scalar value |
-| `true` | **wildcard** — must be configured, value is tenant-defined |
-| `false` | **negated** — must be present *and* false |
-| `{}` / `[]` | **empty** — declared, nothing specified |
+| `true` | **wildcard**: must be configured, value is tenant-defined |
+| `false` | **negated**: must be present *and* false |
+| `{}` / `[]` | **empty**: declared, nothing specified |
 | *absent* | the policy does not mention this dimension at all |
 
-Absence is modelled as *no map entry*, which is precisely what keeps it distinct from wildcard and from empty.
+Absence is modelled as *no map entry*. That is exactly what keeps it distinct from wildcard and from empty.
 
-Decisions worth knowing about, because they are judgements rather than facts:
+Some rules are judgements rather than facts:
 
-- **Set comparison folds case, order and duplicates.** `["high","medium"]` and `["medium","high"]` both ship in the corpus today, as do `All` and `all`. Without this, the tool would report differences that do not exist.
-- **A wildcard is not equal to a concrete value.** "This must be configured" and "this must equal X" are different assertions. Treating them as the same would hide the most interesting class of disagreement — which framework is stricter.
+- **Set comparison ignores case, order and duplicates.** `["high","medium"]` and `["medium","high"]` both ship in the corpus today, as do `All` and `all`. Without this, the tool would report differences that do not exist.
+- **A wildcard is not equal to a concrete value.** "This must be configured" and "this must equal X" are different assertions. Treating them as the same would hide the most interesting kind of disagreement: which framework is stricter.
 - **Opposite polarity is a conflict, not merely a difference.** `requireCompliant: true` against `false` means one policy targets compliant devices and the other targets non-compliant ones.
-- **`Office365` and `All` stay different,** with a note explaining the containment. Silently calling a superset "the same" is a judgement the tool is not in a position to make.
-- **The alias table in `src/domain/aliases.ts` is a semantic assertion.** The corpus writes `signInFrequency: true` in seven policies and `{isEnabled: true}` in one; this app treats them as the same claim. If that reading is wrong the diff under-reports, which is why the table is one visible reviewable file rather than logic buried in a parser.
+- **`Office365` and `All` stay different,** with a note explaining that one contains the other. Quietly calling a superset "the same" is a judgement the tool is not in a position to make.
+- **The alias table in `src/domain/aliases.ts` is a semantic assertion.** The corpus writes `signInFrequency: true` in seven policies and `{isEnabled: true}` in one, and this app treats them as the same claim. If that reading is wrong, the diff under-reports. That is why the table is one file you can review rather than logic buried in a parser.
+- **Coverage scoring** lives in `src/domain/diff/coverage.ts`, with one test per rule in `tests/coverage.spec.ts`. A match must share a control, not just scope or the grant operator. A broader value never counts as meeting a narrower one.
 
-Application identifiers that cannot be named are rendered as truncated GUIDs with the full value on hover. **They are never given an invented name** — a reader can tell that `a4f2693f…` needs looking up, but cannot tell that a plausible-sounding wrong label is wrong.
-
----
-
-## Why it looks like this
-
-The graph wants to colour-code ten node types. It cannot: the design budget is one accent (two maximum) covering under 3% of any viewport, and semantic status colours count against it.
-
-So meaning is carried by channels that are not hue — rank position, fill and weight, silhouette, font family (mono means a literal policy value, sans means the app's own prose), opacity, and **bar width**. One accent, three weights. It is spent on exactly one thing: which row differs.
-
-Worst case, six columns by fourteen ranks with everything differing:
-
-```
-6 × 14 × 3px × 44px = 11,088px²   against   1440 × 900 = 1,296,000px²   =  0.86%
-```
-
-Comfortably inside budget — but only while the highlight stays a row-level bar. **If you ever widen it to whole nodes, redo this sum first.**
-
-One measured correction worth keeping in mind: on a dark theme, *fill* cannot carry the block-vs-grant distinction. There is almost no luminance headroom below the paper colour, so even a generous fill step measures ~1.5:1 against an open terminal, which is close to invisible in greyscale. The distinction is carried by type weight and case, and by the stop-bar rule across the top edge; fill only supports it.
-
-Theme, type and token rationale are stamped at the top of `src/styles/tokens.css`.
+Application identifiers that cannot be named are rendered as truncated GUIDs with the full value on hover. **They are never given an invented name.** A reader can tell that `a4f2693f…` needs looking up, but cannot tell that a plausible-sounding wrong label is wrong.
 
 ---
 
-## Commands
+## Development
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server |
-| `npm run build` | Verify, typecheck, then production build |
-| `npm run check` | The full gate: verify + typecheck + lint + tests |
+| `npm run build` | Census guard, typecheck, then production build to `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run check` | The full gate: census guard + typecheck + lint + tests |
 | `npm run verify` | Census guard over the baseline files (see below) |
-| `npm run sync-baselines` | Re-copy baselines from CA-BaselineAuditor (`-- --write` to apply) |
-| `npm run sync-app-ids` | Resolve unknown app GUIDs (`-- --write` to apply) |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest, single run (`npm run test:watch` to watch) |
+| `npm run sync-baselines` | Re-copy baselines from CA-BaselineAuditor (dry run; `-- --write` to apply) |
+| `npm run sync-app-ids` | Resolve unknown app GUIDs (dry run; `-- --write` to apply) |
 
 ### The census guard
 
-`npm run verify` walks every leaf of every policy and **fails if anything is unaccounted for**.
+`npm run verify` walks every leaf of every baseline policy and **fails if anything is unaccounted for**. The tenant loader applies the same check to the raw Graph object and reports any populated field no adapter reads.
 
-The risk it addresses is not that a baseline refresh breaks the build — it is that a refresh adds a dimension this app does not model, the app silently ignores it, and every comparison involving that dimension is quietly wrong with no visible symptom. Adding a path to `src/domain/facetSpecs.ts` is the fix.
+It protects against silent errors, not broken builds. Without it, a baseline refresh could add a dimension this app does not model, the app would ignore it, and every comparison involving that dimension would be wrong with no visible symptom. The fix is to add the path to `src/domain/facetSpecs.ts`.
 
-`npm run sync-app-ids` resolves application GUIDs against [merill/microsoft-info](https://github.com/merill/microsoft-info) — the same dataset CA-Reporter uses — at build time, writing results into `config/app-ids.json`. It is deliberately not a runtime lookup: the app promises it makes no network calls.
+### Baseline data
 
----
+The files in `src/data/baselines/` are external data. Never hand-edit them. `npm run sync-baselines` copies them from a sibling checkout of CA-BaselineAuditor, at the path set by `syncSourcePath` in `config/app.config.json` (default `../CA-BaselineAuditor/Baselines`). Override it with `-- --from=<path>`. After `--write`, the census guard runs automatically.
 
-## Still needs a human
+### Application names
 
-Automated checks cover the domain logic, the layout invariants and that the app mounts and renders. These do not:
+`npm run sync-app-ids` resolves application GUIDs against [merill/microsoft-info](https://github.com/merill/microsoft-info) (the same dataset CA-Reporter uses) and writes the results to `config/app-ids.json`. It runs at build time, not at runtime, because the app makes no network calls. To add a name by hand, add a verified entry with its source.
+
+### Manual checks
+
+The tests cover the domain logic, layout invariants, node geometry and that the app mounts and renders. These checks still need a person:
 
 - **Greyscale check.** Desaturate a screenshot. Block and grant terminals must stay distinguishable. If they do not, the design has drifted back onto hue.
-- **Keyboard walk.** Tab into the board, `↓`/`↑` to move down ranks, `←`/`→` to jump to the same rank in the next column, `Esc` to leave. That last binding is the whole product as a keystroke.
-- **Six columns at 1280px.** The point at which the ghost union gets dense.
-- **A real tenant export**, round-tripped through Load JSON.
+- **Keyboard walk.** Every binding listed under [Features](#features), especially `Esc`.
+- **Six columns at 1280px.** This is where the ghost union gets dense.
+- **A real tenant export**, loaded through Load JSON, compared, and checked in Coverage.
 
 ---
 
-## Layout
+## Project layout
 
 ```
 config/          baseline registry, app-id map
 scripts/         census guard, baseline sync, app-id sync
 src/
   data/          the four baseline files + loader
-  domain/        types · facetSpecs · aliases · adapters · graph · diff
-  state/         reducer, hash sync, linked viewport
-  components/    picker · compare board · flow nodes · diff table
+  domain/        types · facetSpecs · aliases · adapters · graph · diff (compare, coverage, export)
+  state/         reducer + hash sync, cross-column focus, node measurement
+  components/    picker · compare board · flow nodes · diff table · coverage · ui
   styles/        tokens.css (read this first) · global · flow
-tests/           domain, layout, adapter, and mount smoke tests
+tests/           domain, coverage, export, layout, geometry, adapter, Graph fixtures, mount smoke
 ```
 
-`src/domain/facetSpecs.ts` is the single source of truth for extraction, node membership, rank order, the diff's path union, and the census guard. Start there.
+`src/domain/facetSpecs.ts` is the single source of truth for extraction, node membership, rank order, the diff's path union and the census guard. Start there.
+
+Visual design rules (the one-accent budget and its arithmetic, and which channels carry meaning instead of colour) are documented at the top of `src/styles/tokens.css`. Read them before changing any styling.
+
+Built with React 19, TypeScript and Vite. The only runtime dependency beyond React is [`@xyflow/react`](https://reactflow.dev) v12. Layout is hand-computed rather than delegated to dagre or elk, because a layout engine would break the cross-column rank alignment.
 
 ---
 
-MIT © Robin Pieterse · Turrito Networks
+## Contributing
+
+`npm run check` must pass before a change is merged. Repo-specific rules for humans and agents are in [AGENTS.md](AGENTS.md). Notable changes go in [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## License
+
+[MIT](LICENSE) © Robin Pieterse · Turrito Networks

@@ -15,7 +15,7 @@ import {
 import { BASELINES, MAX_COLUMNS } from '../data/loadBaselines.ts';
 import type { NormalizedPolicy, PolicyKey } from '../domain/types.ts';
 
-export type ViewMode = 'flow' | 'table';
+export type ViewMode = 'flow' | 'table' | 'coverage';
 export type FilterGroup = 'baseline' | 'category' | 'priority' | 'intent';
 
 export interface AppState {
@@ -23,7 +23,8 @@ export interface AppState {
   readonly query: string;
   readonly filters: Readonly<Record<FilterGroup, readonly string[]>>;
   readonly view: ViewMode;
-  readonly linked: boolean;
+  /** Hide ranks every selected column states identically. */
+  readonly collapse: boolean;
   /** Loaded tenant policies. Session-only: never persisted, never put in the URL. */
   readonly loaded: readonly NormalizedPolicy[];
   readonly notice: string | null;
@@ -37,7 +38,7 @@ export type Action =
   | { type: 'toggleFilter'; group: FilterGroup; value: string }
   | { type: 'clearFilters' }
   | { type: 'view'; value: ViewMode }
-  | { type: 'linked'; value: boolean }
+  | { type: 'collapse'; value: boolean }
   | { type: 'addLoaded'; policies: readonly NormalizedPolicy[] }
   | { type: 'clearLoaded' }
   | { type: 'notice'; value: string | null };
@@ -47,7 +48,7 @@ export const initialState: AppState = {
   query: '',
   filters: { baseline: [], category: [], priority: [], intent: [] },
   view: 'flow',
-  linked: true,
+  collapse: false,
   loaded: [],
   notice: null,
 };
@@ -87,8 +88,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, filters: initialState.filters, query: '' };
     case 'view':
       return { ...state, view: action.value };
-    case 'linked':
-      return { ...state, linked: action.value };
+    case 'collapse':
+      return { ...state, collapse: action.value };
     case 'addLoaded':
       return { ...state, loaded: [...state.loaded, ...action.policies], notice: null };
     case 'clearLoaded':
@@ -117,6 +118,8 @@ const encodeHash = (s: AppState): string => {
     if (v.length) params.set(group[0]!, v.join(','));
   }
   if (s.view !== 'flow') params.set('v', s.view);
+  // `d` for "differences only". `c` is already spoken for by the category filter.
+  if (s.collapse) params.set('d', '1');
   const qs = params.toString();
   return `#/c/${shareable.join(',')}${qs ? `?${qs}` : ''}`;
 };
@@ -126,6 +129,7 @@ export interface HashState {
   query: string;
   filters: Record<FilterGroup, string[]>;
   view: ViewMode;
+  collapse: boolean;
   unknown: string[];
 }
 
@@ -139,6 +143,7 @@ export function decodeHash(hash: string): HashState | null {
 
   const params = new URLSearchParams(m[2] ?? '');
   const group = (k: string): string[] => (params.get(k) ?? '').split(',').filter(Boolean);
+  const view = params.get('v');
 
   return {
     selection,
@@ -149,7 +154,8 @@ export function decodeHash(hash: string): HashState | null {
       priority: group('p'),
       intent: group('i'),
     },
-    view: params.get('v') === 'table' ? 'table' : 'flow',
+    view: view === 'table' || view === 'coverage' ? view : 'flow',
+    collapse: params.get('d') === '1',
     unknown,
   };
 }
@@ -171,6 +177,7 @@ function hydrate(): AppState {
     query: parsed.query,
     filters: parsed.filters,
     view: parsed.view,
+    collapse: parsed.collapse,
     notice: parsed.unknown.length
       ? `${parsed.unknown.length} polic${parsed.unknown.length === 1 ? 'y' : 'ies'} in that link no longer exist and were dropped.`
       : null,

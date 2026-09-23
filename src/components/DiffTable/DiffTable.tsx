@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { diffSelection } from '../../domain/diff/diffSelection.ts';
 import { FACET_SPEC_BY_PATH, NODE_SPEC_BY_KEY } from '../../domain/facetSpecs.ts';
 import { useSelectedPolicies } from '../../state/appState.tsx';
-import type { DiffStatus } from '../../domain/diff/compare.ts';
-import type { Facet } from '../../domain/types.ts';
+import { REASON_TEXT, type DiffStatus, type ValueDiff } from '../../domain/diff/compare.ts';
+import { uncomparedLabel, uncomparedPaths, type Facet } from '../../domain/types.ts';
 
 const CELL_CLASS: Record<DiffStatus, string> = {
   same: 'cell-same',
@@ -15,17 +15,35 @@ const CELL_CLASS: Record<DiffStatus, string> = {
   single: '',
 };
 
-function renderValue(facet: Facet | undefined): string {
-  if (!facet) return '—';
+function Value({ facet, valueDiff }: { facet: Facet | undefined; valueDiff?: ValueDiff }) {
+  if (!facet) return <>—</>;
   switch (facet.exp.kind) {
     case 'wildcard':
-      return '⟨any⟩';
+      return <span className="marker">⟨any⟩</span>;
     case 'negated':
-      return 'not required';
+      return <span className="marker">not required</span>;
     case 'empty':
-      return 'declared, nothing specified';
-    default:
-      return facet.display.map((d) => d.label).join(', ');
+      return <span className="marker">declared, nothing specified</span>;
+    default: {
+      // Chips, as on the board: a value every column shares recedes, so the ones that
+      // make this row differ are what the eye lands on.
+      const shared = new Set((valueDiff?.shared ?? []).map((v) => v.toLowerCase()));
+      return (
+        <span className="cell-values">
+          {facet.display.map((token, i) => (
+            <span
+              key={`${token.raw}-${i}`}
+              className="token"
+              data-resolved={token.resolved}
+              data-shared={valueDiff ? shared.has(token.raw.toLowerCase()) : undefined}
+              title={token.resolved ? token.raw : `Unresolved identifier: ${token.raw}`}
+            >
+              {token.label}
+            </span>
+          ))}
+        </span>
+      );
+    }
   }
 }
 
@@ -72,12 +90,24 @@ export function DiffTable() {
         <thead>
           <tr>
             <th scope="col">Dimension</th>
-            {selected.map((p) => (
-              <th scope="col" key={p.policyKey}>
-                {p.id}
-                <span className="visually-hidden"> {p.name}</span>
-              </th>
-            ))}
+            {selected.map((p) => {
+              const uncompared = uncomparedPaths(p);
+              return (
+                <th scope="col" key={p.policyKey}>
+                  {p.id}
+                  <span className="visually-hidden"> {p.name}</span>
+                  {uncompared.length > 0 ? (
+                    <span
+                      className="pnode-uncompared"
+                      style={{ display: 'block' }}
+                      title={`Present in the source, not modelled, so not compared:\n${uncompared.join('\n')}`}
+                    >
+                      {uncomparedLabel(uncompared.length)}
+                    </span>
+                  ) : null}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -99,14 +129,15 @@ export function DiffTable() {
                   ) : null}
                   {spec.label}
                   {entry.reason ? (
-                    <span className="visually-hidden"> ({entry.reason})</span>
+                    <span className="cell-reason">{REASON_TEXT[entry.reason]}</span>
                   ) : null}
                 </th>
                 {selected.map((p, i) => {
                   const status = entry.status[i] ?? 'single';
+                  const valueDiff = entry.valueDiff?.[i];
                   return (
                     <td key={p.policyKey} className={CELL_CLASS[status]}>
-                      {renderValue(p.facets.get(path))}
+                      <Value facet={p.facets.get(path)} {...(valueDiff ? { valueDiff } : {})} />
                       {status === 'only' ? (
                         <span className="prow-flag"> only here</span>
                       ) : null}

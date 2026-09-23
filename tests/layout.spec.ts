@@ -10,7 +10,14 @@
 import { describe, expect, it } from 'vitest';
 import { BASELINES } from '../src/data/loadBaselines.ts';
 import { diffSelection } from '../src/domain/diff/diffSelection.ts';
-import { buildGraph, computeRankLayout } from '../src/domain/graph/buildGraph.ts';
+import {
+  buildBoard,
+  buildGraph,
+  computeRankLayout,
+  nodeHeight,
+  nodeId,
+  COL_PITCH,
+} from '../src/domain/graph/buildGraph.ts';
 import { terminalOf } from '../src/domain/graph/terminal.ts';
 import type { NormalizedPolicy } from '../src/domain/types.ts';
 
@@ -144,5 +151,77 @@ describe('every policy in the corpus builds a coherent graph', () => {
     expect(tones.get('grant')).toBeGreaterThan(0);
     expect(tones.get('session')).toBeGreaterThan(0);
     expect(tones.get('none')).toBe(4); // MT.1003, MT.1004, MT.1011, MT.1071
+  });
+});
+
+describe('the whole board', () => {
+  it('draws one band per rank and keeps columns on a single x pitch', () => {
+    const diff = diffSelection(SELECTION);
+    const layout = computeRankLayout(SELECTION, diff);
+    const board = buildBoard(SELECTION, diff, layout);
+
+    const bands = board.nodes.filter((n) => n.type === 'band');
+    expect(bands).toHaveLength(diff.rankPlan.length);
+    // Each band carries its rank key, in rank order. The cross-column focus highlight
+    // is keyed off exactly this, so a band without its key would silently break it.
+    expect(bands.map((b) => (b.data as { nodeKey: string }).nodeKey)).toEqual([
+      ...diff.rankPlan,
+    ]);
+
+    const policyNodes = board.nodes.filter((n) => n.type === 'policy');
+    const xs = [...new Set(policyNodes.map((n) => n.position.x))].sort((a, b) => a - b);
+    expect(xs).toEqual(SELECTION.map((_, i) => i * COL_PITCH));
+  });
+
+  it('still aligns ranks across columns once composed into one canvas', () => {
+    const diff = diffSelection(SELECTION);
+    const layout = computeRankLayout(SELECTION, diff);
+    const board = buildBoard(SELECTION, diff, layout);
+
+    for (const nodeKey of diff.rankPlan) {
+      const ys = board.nodes
+        .filter((n) => n.type === 'policy' && (n.data as { nodeKey: string }).nodeKey === nodeKey)
+        .map((n) => n.position.y);
+      expect(ys).toHaveLength(SELECTION.length);
+      expect(new Set(ys).size).toBe(1);
+    }
+  });
+
+  it('sizes a head node to fit a title that wraps past two lines', () => {
+    // CIS-5.2.2.3's name wraps to three lines at NODE_W; a fixed height clipped it.
+    const long = BASELINES.byKey.get('CIS~CIS-5.2.2.3')!;
+    const short = BASELINES.byKey.get('CISA~MS.AAD.1.1')!;
+    const tall = nodeHeight('head', [], undefined, long);
+    const squat = nodeHeight('head', [], undefined, short);
+    expect(long.name.length).toBeGreaterThan(short.name.length);
+    expect(tall).toBeGreaterThan(squat);
+  });
+});
+
+describe('measured heights', () => {
+  const diff = diffSelection(SELECTION);
+  const estimated = computeRankLayout(SELECTION, diff);
+
+  it('lets a rendered height replace the estimate, and keeps every column aligned', () => {
+    // One column's Users node rendered 200px taller than predicted - a late web font, a
+    // wrap the metric table missed. The whole band grows, in every column at once.
+    const rank = diff.rankPlan.find((k) => k !== 'policy.head' && k !== 'end.terminal')!;
+    const tall = estimated.rows.get(rank)!.h + 200;
+    const measured = new Map([[nodeId(SELECTION[1]!, rank), tall]]);
+    const layout = computeRankLayout(SELECTION, diff, measured);
+
+    expect(layout.rows.get(rank)!.h).toBe(tall);
+    expect(layout.totalHeight).toBe(estimated.totalHeight + 200);
+
+    const graphs = SELECTION.map((p, i) => buildGraph(p, diff, i, layout));
+    const next = diff.rankPlan[diff.rankPlan.indexOf(rank) + 1]!;
+    const ys = graphs.map((g) => g.nodes.find((n) => n.data.nodeKey === next)?.position.y);
+    expect(new Set(ys).size).toBe(1);
+  });
+
+  it('can also shrink a band the estimate over-allocated', () => {
+    const measured = new Map<string, number>();
+    for (const p of SELECTION) measured.set(nodeId(p, 'end.terminal'), 30);
+    expect(computeRankLayout(SELECTION, diff, measured).rows.get('end.terminal')!.h).toBe(30);
   });
 });

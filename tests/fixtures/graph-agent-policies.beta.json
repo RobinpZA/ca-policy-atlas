@@ -1,0 +1,45 @@
+{
+  "value": [
+    {
+      "id": "128c8c73-0a52-4f16-94ab-55f640d0fe1f",
+      "displayName": "Block all unapproved agents",
+      "state": "enabledForReportingButNotEnforced",
+      "createdDateTime": "2025-10-01T07:40:06Z",
+      "conditions": {
+        "applications": {
+          "includeApplications": ["All"],
+          "excludeApplications": ["Office365"]
+        },
+        "clientApplications": {
+          "agentIdServicePrincipalFilter": {
+            "mode": "include",
+            "rule": "CustomSecurityAttribute.ConditionalAccess_isApproved -contains \"False\""
+          }
+        },
+        "users": {
+          "includeUsers": ["None"]
+        }
+      },
+      "grantControls": {
+        "builtInControls": ["block"]
+      }
+    },
+    {
+      "id": "1318e96f-b473-4e7f-91dd-bf0b0a8d18dd",
+      "displayName": "Block all agent users from accessing resources",
+      "state": "enabled",
+      "createdDateTime": "2025-10-31T06:10:04Z",
+      "conditions": {
+        "applications": {
+          "includeApplications": ["All"]
+        },
+        "users": {
+          "includeUsers": ["AllAgentIdUsers"]
+        }
+      },
+      "grantControls": {
+        "builtInControls": ["block"]
+      }
+    }
+  ]
+}

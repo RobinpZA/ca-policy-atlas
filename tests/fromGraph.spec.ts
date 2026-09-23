@@ -120,6 +120,127 @@ describe('normalizeGraphPolicy', () => {
   });
 });
 
+describe('Graph shapes the baselines do not share', () => {
+  const withGrant = (authenticationStrength: RawObject): RawObject => ({
+    ...TENANT_POLICY,
+    grantControls: { operator: 'OR', builtInControls: [], authenticationStrength },
+  });
+  const strengthOf = (policy: RawObject) =>
+    normalizeGraphPolicy(policy, 0).facets.get(
+      'grantControls.authenticationStrength.requirementsSatisfied',
+    )?.exp;
+
+  it('identifies a built-in strength by id, not by requirementsSatisfied', () => {
+    // Graph reports "mfa" for all three built-ins. Reading that field made
+    // phishing-resistant MFA indistinguishable from plain MFA.
+    expect(strengthOf(TENANT_POLICY)).toMatchObject({ kind: 'scalar', value: 'phishingResistant' });
+    expect(
+      strengthOf(withGrant({ id: '00000000-0000-0000-0000-000000000002', requirementsSatisfied: 'mfa' })),
+    ).toMatchObject({ value: 'mfa' });
+    expect(
+      strengthOf(withGrant({ id: '00000000-0000-0000-0000-000000000003', requirementsSatisfied: 'mfa' })),
+    ).toMatchObject({ value: 'passwordlessMfa' });
+  });
+
+  it('names a custom strength by the export own displayName, or leaves it a raw id', () => {
+    const id = 'c0ffee00-1111-2222-3333-444455556666';
+    expect(
+      strengthOf(withGrant({ id, displayName: 'FIDO2 only', requirementsSatisfied: 'mfa' })),
+    ).toMatchObject({ value: 'FIDO2 only' });
+    expect(strengthOf(withGrant({ id, requirementsSatisfied: 'mfa' }))).toMatchObject({ value: id });
+  });
+
+  it('matches a baseline asking for phishing-resistant MFA', () => {
+    const tenant = normalizeGraphPolicy(TENANT_POLICY, 0);
+    const baseline = BASELINES.policies.find(
+      (b) =>
+        b.facets.get('grantControls.authenticationStrength.requirementsSatisfied')?.exp.key ===
+        'phishingresistant',
+    )!;
+    const d = diffSelection([baseline, tenant]);
+    expect(
+      d.byPath.get('grantControls.authenticationStrength.requirementsSatisfied')?.status,
+    ).toEqual(['same', 'same']);
+  });
+
+  it('flattens the guest-targeting object into one comparable set', () => {
+    const policy: RawObject = {
+      ...TENANT_POLICY,
+      conditions: {
+        ...(TENANT_POLICY['conditions'] as RawObject),
+        users: {
+          includeUsers: [],
+          includeGuestsOrExternalUsers: {
+            guestOrExternalUserTypes: 'internalGuest,b2bCollaborationGuest',
+            externalTenants: {
+              '@odata.type': '#microsoft.graph.conditionalAccessEnumeratedExternalTenants',
+              membershipKind: 'enumerated',
+              members: ['d1e2f3a4-0000-0000-0000-00000000cccc'],
+            },
+          },
+          excludeGuestsOrExternalUsers: {
+            guestOrExternalUserTypes: 'serviceProvider',
+            externalTenants: {
+              '@odata.type': '#microsoft.graph.conditionalAccessAllExternalTenants',
+              membershipKind: 'all',
+            },
+          },
+        },
+      },
+    };
+    const t = normalizeGraphPolicy(policy, 0);
+    expect(t.facets.get('users.includeGuestsOrExternalUsers')?.exp).toMatchObject({
+      kind: 'set',
+      values: ['internalGuest', 'b2bCollaborationGuest', 'd1e2f3a4-0000-0000-0000-00000000cccc'],
+    });
+    expect(t.facets.get('users.excludeGuestsOrExternalUsers')?.exp).toMatchObject({
+      kind: 'set',
+      values: ['serviceProvider'],
+    });
+    expect(t.anomalies.filter((a) => a.reason === 'unknown-path')).toEqual([]);
+  });
+
+  it('splits the transferMethods flags string into a set', () => {
+    const policy: RawObject = {
+      ...TENANT_POLICY,
+      conditions: {
+        ...(TENANT_POLICY['conditions'] as RawObject),
+        authenticationFlows: { transferMethods: 'deviceCodeFlow,authenticationTransfer' },
+      },
+    };
+    const f = normalizeGraphPolicy(policy, 0).facets.get(
+      'conditions.authenticationFlows.transferMethods',
+    );
+    expect(f?.display.map((d) => d.label)).toEqual(['Device code flow', 'Authentication transfer']);
+  });
+
+  it('reports a populated Graph field no adapter reads, and ignores nulls and annotations', () => {
+    const policy: RawObject = {
+      ...TENANT_POLICY,
+      'grantControls@odata.context': 'https://graph.microsoft.com/...',
+      conditions: {
+        ...(TENANT_POLICY['conditions'] as RawObject),
+        clientApplications: { includeServicePrincipals: ['ServicePrincipalsInMyTenant'] },
+        times: null,
+      },
+    };
+    const unknown = normalizeGraphPolicy(policy, 0)
+      .anomalies.filter((a) => a.reason === 'unknown-path')
+      .map((a) => a.path);
+    expect(unknown).toEqual(['conditions.clientApplications.includeServicePrincipals']);
+  });
+
+  it('singularises a sign-in frequency of one', () => {
+    const policy: RawObject = {
+      ...TENANT_POLICY,
+      sessionControls: { signInFrequency: { value: 1, type: 'days', isEnabled: true } },
+    };
+    expect(
+      normalizeGraphPolicy(policy, 0).facets.get('sessionControls.signInFrequency.interval')?.exp,
+    ).toMatchObject({ value: '1 day' });
+  });
+});
+
 describe('comparing a tenant policy against a baseline', () => {
   it('reads a baseline wildcard against a concrete tenant value as a specificity gap', () => {
     const tenant = normalizeGraphPolicy(TENANT_POLICY, 0);

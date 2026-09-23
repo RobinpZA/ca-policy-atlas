@@ -68,14 +68,40 @@ describe('the app mounts', () => {
 
   it('restores a comparison from the URL hash', () => {
     const el = mount('#/c/VanSurksum~CAD016,CISA~MS.AAD.2.1');
-    const heads = el.querySelectorAll('.column-head .column-name');
-    expect(heads.length).toBe(2);
-    expect(el.querySelectorAll('.column').length).toBe(2);
+    // One head node per policy - the head node IS the column header now.
+    expect(el.querySelectorAll('.pnode[data-kind="head"]').length).toBe(2);
+    expect(el.querySelectorAll('.pnode[data-col="1"]').length).toBeGreaterThan(0);
+  });
+
+  it('drops a pinned rank when the selection changes, rather than dimming the new board', () => {
+    const el = mount('#/c/VanSurksum~CAD016,CISA~MS.AAD.2.1,CIS~CIS-5.2.2.4');
+    const chip = el.querySelector<HTMLButtonElement>('.verdict-chip');
+    expect(chip).not.toBeNull();
+    act(() => chip!.click());
+    act(() => chip!.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false })));
+    expect(el.querySelector('.board')?.hasAttribute('data-focus-rank')).toBe(true);
+
+    // Deselect one column. The pinned rank may not exist on the new board.
+    const row = el.querySelector<HTMLButtonElement>('.policy-row[aria-checked="true"]');
+    act(() => row!.click());
+    expect(el.querySelector('.board')?.hasAttribute('data-focus-rank')).toBe(false);
+  });
+
+  it('opens the coverage view from the hash, and asks for an export when nothing is loaded', () => {
+    const el = mount('#/c/?v=coverage');
+    expect(el.querySelector('button[aria-pressed="true"]')?.textContent).toBe('Coverage');
+    expect(el.querySelector('.empty h2')?.textContent).toContain('Nothing loaded');
+  });
+
+  it('shows why a row differs in the table, in words', () => {
+    const el = mount('#/c/VanSurksum~CAD016,CIS~CIS-5.2.2.4?v=table');
+    expect(el.querySelectorAll('.cell-reason').length).toBeGreaterThan(0);
+    expect(el.querySelector('table.diff .token')).not.toBeNull();
   });
 
   it('drops unknown keys from a stale link instead of failing', () => {
     const el = mount('#/c/VanSurksum~CAD016,Nope~DOES-NOT-EXIST');
-    expect(el.querySelectorAll('.column').length).toBe(1);
+    expect(el.querySelectorAll('.pnode[data-kind="head"]').length).toBe(1);
     expect(el.querySelector('.notice')?.textContent).toMatch(/no longer exist/);
   });
 
@@ -124,7 +150,11 @@ describe('the app mounts', () => {
   it('renders a six-column comparison, the maximum the picker allows', () => {
     const keys = BASELINES.policies.slice(0, 6).map((p) => p.policyKey);
     const el = mount(`#/c/${keys.join(',')}`);
-    expect(el.querySelectorAll('.column').length).toBe(6);
+    expect(el.querySelectorAll('.pnode[data-kind="head"]').length).toBe(6);
     expect(el.querySelectorAll('.gutter-label').length).toBeGreaterThan(0);
+    // One band per rank, drawn behind the columns so a rank reads as a row.
+    expect(el.querySelectorAll('.rank-band').length).toBe(
+      el.querySelectorAll('.gutter-label').length,
+    );
   });
 });

@@ -33,6 +33,8 @@ const IDENTITIES: Record<string, string> = {
   all: 'All users',
   none: 'No users',
   guestsorexternalusers: 'Guests / external users',
+  // Graph's agent-identity target; documented in the conditionalAccessPolicy list examples.
+  allagentidusers: 'All agent users',
 };
 
 const CLIENT_APP_TYPES: Record<string, string> = {

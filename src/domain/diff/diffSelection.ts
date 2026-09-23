@@ -151,3 +151,30 @@ export function diffSelection(selected: readonly NormalizedPolicy[]): SelectionD
 /** Stable memo key for a selection - order-sensitive, because column order is visible. */
 export const selectionKey = (selected: readonly NormalizedPolicy[]): string =>
   selected.map((p) => p.policyKey).join('|');
+
+/** Ranks that are structural rather than asserted, and so are never collapsed away. */
+const NEVER_COLLAPSED: ReadonlySet<NodeKey> = new Set(ALWAYS_PRESENT);
+
+/**
+ * Drop every rank on which all columns agree.
+ *
+ * Six baselines with overlapping conditions produce a fourteen-rank board of which
+ * perhaps three ranks carry a disagreement. Reading the other eleven is the cost of
+ * finding those three. This collapses them, and returns a diff whose rankPlan is the
+ * only thing that changed - layout, board build and the gutter all follow with no
+ * further plumbing.
+ *
+ * The head and the terminal always survive: a column with no identity and no outcome
+ * is not a policy, it is a fragment. Single-policy mode is returned untouched, since
+ * "every column agrees" is vacuously true of one column.
+ */
+export function collapseRankPlan(diff: SelectionDiff, on: boolean): SelectionDiff {
+  if (!on || diff.mode === 'single') return diff;
+
+  const rankPlan = diff.rankPlan.filter((key) => {
+    if (NEVER_COLLAPSED.has(key)) return true;
+    return !diff.nodeStatus.every((column) => column.get(key) === 'same');
+  });
+
+  return rankPlan.length === diff.rankPlan.length ? diff : { ...diff, rankPlan };
+}

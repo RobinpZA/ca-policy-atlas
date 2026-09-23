@@ -29,9 +29,15 @@ of policy dimensions.
   keeps the semantics testable without React.
 - **Layout is hand-computed on purpose.** Do not introduce dagre or elk: a layout engine
   optimises each column independently and destroys cross-column rank alignment, which is
-  the product. `tests/layout.spec.ts` guards this.
+  the product. `tests/layout.spec.ts` guards this. Rendered heights are reported by the
+  nodes (`src/state/measure.tsx`) and replace the estimate; `nodeHeight()` is the
+  first-paint estimate and the fallback in any test that does not inject heights, so keep
+  it honest - `tests/geometry.spec.ts` checks it against real rendered heights.
+- **Coverage scoring is a judgement.** Its rules live only in `src/domain/diff/coverage.ts`,
+  each with a test in `tests/coverage.spec.ts`. Change a rule by changing its test.
+- **Fonts are bundled** (`@fontsource-variable/*`). Newsreader must be the `opsz.css` build.
 - **One accent, under 3% of viewport.** Encode meaning with rank, weight, silhouette,
-  font family, opacity and bar width instead. Redo the arithmetic in the README before
+  font family, opacity and bar width instead. Redo the arithmetic in `tokens.css` before
   widening any highlight.
 - CSS references tokens by name. No literal colour or font values outside `tokens.css`.
 

@@ -1,17 +1,17 @@
 import { CompareBoard } from './components/Compare/CompareBoard.tsx';
+import { CoverageView } from './components/Coverage/CoverageView.tsx';
 import { DiffTable } from './components/DiffTable/DiffTable.tsx';
 import { PolicyPicker } from './components/PolicyPicker/PolicyPicker.tsx';
-import { Legend } from './components/ui/Legend.tsx';
-import { LoadPolicies } from './components/ui/LoadPolicies.tsx';
+import { VerdictStrip } from './components/ui/VerdictStrip.tsx';
 import { useAppState, useDispatch } from './state/appState.tsx';
+import { FocusProvider } from './state/focus.tsx';
 
 export function App() {
   const state = useAppState();
   const dispatch = useDispatch();
-  const single = state.selection.length < 2;
 
   return (
-    <>
+    <FocusProvider>
       <a className="skip-link" href="#board">
         Skip to comparison
       </a>
@@ -20,10 +20,9 @@ export function App() {
         <h1 className="app-title">
           CA Policy Atlas <span>&mdash; Conditional Access baselines</span>
         </h1>
+        <span className="app-version">v{__APP_VERSION__}</span>
 
         <div className="header-spacer" />
-
-        <Legend />
 
         <div className="toggle-group" role="group" aria-label="View">
           <button
@@ -42,31 +41,19 @@ export function App() {
           >
             Table
           </button>
-        </div>
-
-        <button
-          type="button"
-          className="btn"
-          aria-pressed={state.linked}
-          disabled={single}
-          onClick={() => dispatch({ type: 'linked', value: !state.linked })}
-          title={
-            single
-              ? 'Linked panning applies once two or more policies are selected'
-              : 'Pan and zoom every column together so the rows stay aligned'
-          }
-        >
-          {state.linked ? 'Linked' : 'Unlinked'}
-        </button>
-
-        <LoadPolicies />
-
-        {state.selection.length > 0 ? (
-          <button type="button" className="btn btn-quiet" onClick={() => dispatch({ type: 'clear' })}>
-            Clear
+          <button
+            type="button"
+            className="btn"
+            aria-pressed={state.view === 'coverage'}
+            title="How well your loaded policies cover a baseline"
+            onClick={() => dispatch({ type: 'view', value: 'coverage' })}
+          >
+            Coverage
           </button>
-        ) : null}
+        </div>
       </header>
+
+      <VerdictStrip />
 
       {state.notice ? (
         <div className="notice" role="status">
@@ -84,10 +71,19 @@ export function App() {
 
       <div className="layout">
         <PolicyPicker />
-        <main id="board" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {state.view === 'flow' ? <CompareBoard /> : <DiffTable />}
+        <main
+          id="board"
+          style={{ display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}
+        >
+          {state.view === 'flow' ? (
+            <CompareBoard />
+          ) : state.view === 'table' ? (
+            <DiffTable />
+          ) : (
+            <CoverageView />
+          )}
         </main>
       </div>
-    </>
+    </FocusProvider>
   );
 }

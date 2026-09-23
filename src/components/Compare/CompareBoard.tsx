@@ -1,216 +1,263 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Controls,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
-  type Viewport,
-  type NodeTypes,
   type EdgeTypes,
+  type NodeTypes,
+  type Viewport,
 } from '@xyflow/react';
 
 import { PolicyNode } from '../flow/PolicyNode.tsx';
+import { RankBandNode } from '../flow/RankBandNode.tsx';
 import { ChainEdge } from '../flow/ChainEdge.tsx';
-import { buildGraph, computeRankLayout, NODE_W } from '../../domain/graph/buildGraph.ts';
-import { diffSelection } from '../../domain/diff/diffSelection.ts';
+import { buildBoard, computeRankLayout, COL_PITCH } from '../../domain/graph/buildGraph.ts';
+import { collapseRankPlan, diffSelection } from '../../domain/diff/diffSelection.ts';
 import { NODE_SPEC_BY_KEY } from '../../domain/facetSpecs.ts';
-import { computeFit, viewportStore } from '../../state/linkedViewport.ts';
 import { useAppState, useSelectedPolicies } from '../../state/appState.tsx';
-import type { NormalizedPolicy } from '../../domain/types.ts';
+import { activeRank, useFocus } from '../../state/focus.tsx';
+import { MeasureContext } from '../../state/measure.tsx';
+import type { NodeKey } from '../../domain/types.ts';
 
-const nodeTypes: NodeTypes = { policy: PolicyNode };
+const nodeTypes: NodeTypes = { policy: PolicyNode, band: RankBandNode };
 const edgeTypes: EdgeTypes = { chain: ChainEdge };
 
-interface ColumnProps {
-  policy: NormalizedPolicy;
-  columnIndex: number;
-  diff: ReturnType<typeof diffSelection>;
-  layout: ReturnType<typeof computeRankLayout>;
-}
+const PAD = 28;
 
-function ColumnFlow({ policy, columnIndex, diff, layout }: ColumnProps) {
-  const { setViewport } = useReactFlow();
-  const { linked } = useAppState();
-  const id = policy.policyKey;
-
-  const { nodes, edges } = useMemo(
-    () => buildGraph(policy, diff, columnIndex, layout),
-    [policy, diff, columnIndex, layout],
-  );
-
-  // Mirror the shared viewport - unless this column is the one driving the gesture.
-  // Without that guard, applying a viewport re-fires onMove and the columns oscillate.
-  useEffect(() => {
-    if (!linked) return undefined;
-    return viewportStore.subscribe((v, source) => {
-      if (source === id) return;
-      setViewport(v, { duration: 0 });
-    });
-  }, [id, linked, setViewport]);
-
-  const onMoveStart = useCallback(() => viewportStore.claim(id), [id]);
-  const onMoveEnd = useCallback(() => viewportStore.release(id), [id]);
-  const onMove = useCallback(
-    (_: unknown, v: Viewport) => {
-      if (linked && viewportStore.isDriver(id)) viewportStore.publish(v, id);
-    },
-    [id, linked],
-  );
-
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      onMoveStart={onMoveStart}
-      onMove={onMove}
-      onMoveEnd={onMoveEnd}
-      defaultViewport={viewportStore.get()}
-      minZoom={0.35}
-      maxZoom={1.4}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      elementsSelectable={false}
-      nodesFocusable
-      edgesFocusable={false}
-      proOptions={{ hideAttribution: true }}
-      aria-label={`Policy flow for ${policy.name}`}
-    />
-  );
-}
-
-function RankGutter({
-  layout,
-  rankPlan,
-  viewport,
-}: {
-  layout: ReturnType<typeof computeRankLayout>;
-  rankPlan: readonly string[];
-  viewport: Viewport;
-}) {
-  return (
-    <div className="gutter" aria-hidden="true">
-      {rankPlan.map((key) => {
-        const place = layout.rows.get(key as never);
-        const spec = NODE_SPEC_BY_KEY.get(key as never);
-        if (!place || !spec) return null;
-        return (
-          <div
-            key={key}
-            className="gutter-label"
-            style={{ top: `${place.y * viewport.zoom + viewport.y}px` }}
-          >
-            {spec.title}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-export function CompareBoard() {
+function Board() {
   const selected = useSelectedPolicies();
-  const { linked } = useAppState();
-  const boardRef = useRef<HTMLDivElement>(null);
-  const [viewport, setLocalViewport] = useState<Viewport>(viewportStore.get());
+  const { collapse } = useAppState();
+  const focus = useFocus();
+  const { setViewport } = useReactFlow();
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [viewport, setLocalViewport] = useState<Viewport>({ x: PAD, y: PAD, zoom: 1 });
 
-  const diff = useMemo(() => diffSelection(selected), [selected]);
-  const layout = useMemo(() => computeRankLayout(selected, diff), [selected, diff]);
+  // Rendered heights by node id. Reports arrive per node; they are batched into one state
+  // update per animation frame, and a batch that changes nothing changes no state - so
+  // a steady board settles after one correction instead of re-rendering per node.
+  const [measured, setMeasured] = useState<ReadonlyMap<string, number>>(() => new Map());
+  const pending = useRef(new Map<string, number>());
+  const frame = useRef<number | null>(null);
+  const reportHeight = useCallback((id: string, height: number) => {
+    pending.current.set(id, Math.ceil(height));
+    if (frame.current !== null) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = null;
+      const batch = pending.current;
+      pending.current = new Map();
+      setMeasured((prev) => {
+        const changed = [...batch].some(([k, v]) => prev.get(k) !== v);
+        if (!changed) return prev;
+        const next = new Map(prev);
+        for (const [k, v] of batch) next.set(k, v);
+        return next;
+      });
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      if (frame.current !== null) cancelAnimationFrame(frame.current);
+    },
+    [],
+  );
 
-  // The gutter tracks the shared viewport so its rank labels stay glued to the rows.
-  useEffect(() => viewportStore.subscribe((v) => setLocalViewport(v)), []);
+  const full = useMemo(() => diffSelection(selected), [selected]);
+  const diff = useMemo(() => collapseRankPlan(full, collapse), [full, collapse]);
+  const hidden = full.rankPlan.length - diff.rankPlan.length;
+  const layout = useMemo(
+    () => computeRankLayout(selected, diff, measured),
+    [selected, diff, measured],
+  );
+  const board = useMemo(() => buildBoard(selected, diff, layout), [selected, diff, layout]);
 
-  // One deterministic fit per layout change, broadcast to every column. Letting each
-  // column call fitView would land them at different zooms and break alignment.
+  // Once the user pans or zooms, a late height correction (a font finishing its load)
+  // must not yank the view back to the fit. A new rank plan is a new board, and resets it.
+  const userMoved = useRef(false);
+  const fittedFor = useRef(diff);
+
+  // One deterministic fit for the whole board. With a single canvas there is one
+  // transform to set, so there is nothing to keep in step and nothing to drift.
+  //
+  // This deliberately zooms IN as well as out. An earlier version capped at 1.0, so a
+  // two-column comparison sat at native size in the middle of a canvas three times its
+  // width - technically correct, and a waste of the whole screen. The cap at 1.25 stops
+  // a single narrow column from being blown up to something silly.
   useEffect(() => {
-    const h = boardRef.current?.clientHeight ?? 600;
-    const v = computeFit(layout.totalHeight, h);
-    viewportStore.publish(v, null);
-    setLocalViewport(v);
-  }, [layout]);
+    const el = shellRef.current;
+    if (!el || board.height === 0 || board.width === 0) return;
+    if (fittedFor.current !== diff) {
+      fittedFor.current = diff;
+      userMoved.current = false;
+    }
+    if (userMoved.current) return;
 
-  // Arrow keys: up/down walks ranks in this column, left/right jumps to the same rank
-  // in the next column. That second binding is the whole product as a keystroke.
+    const availW = el.clientWidth - PAD * 2;
+    const availH = el.clientHeight - PAD * 2;
+    const zoom = Math.max(0.4, Math.min(1.25, availW / board.width, availH / board.height));
+
+    // Centre on whichever axis has room to spare. A four-column comparison is usually
+    // much shorter than the viewport, and pinning it to the top left it sitting above a
+    // third of a screen of nothing.
+    const scaledW = board.width * zoom;
+    const scaledH = board.height * zoom;
+    const next: Viewport = {
+      x: scaledW < availW ? (el.clientWidth - scaledW) / 2 : PAD,
+      y: scaledH < availH ? Math.max(PAD, (el.clientHeight - scaledH) / 2) : PAD,
+      zoom,
+    };
+    setViewport(next, { duration: 0 });
+    setLocalViewport(next);
+  }, [board, diff, setViewport]);
+
+  // Arrow keys: up/down walks ranks, left/right jumps to the same rank in the next
+  // column. That second binding is the whole product as a keystroke.
   const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const node = target.closest<HTMLElement>('.pnode');
+    const node = (e.target as HTMLElement).closest<HTMLElement>('.pnode');
     if (!node) return;
 
-    const wrapper = node.closest<HTMLElement>('[data-col]');
-    const col = Number(wrapper?.dataset['col'] ?? '-1');
-    const all = Array.from(document.querySelectorAll<HTMLElement>('[data-col] .pnode'));
-    const inCol = (c: number) =>
-      all.filter((n) => Number(n.closest<HTMLElement>('[data-col]')?.dataset['col']) === c);
+    const col = Number(node.dataset['col'] ?? '-1');
+    const rank = Number(node.dataset['rank'] ?? '-1');
+    if (col < 0 || rank < 0) return;
 
-    const siblings = inCol(col);
-    const idx = siblings.indexOf(node);
-    let next: HTMLElement | undefined;
-
-    if (e.key === 'ArrowDown') next = siblings[idx + 1];
-    else if (e.key === 'ArrowUp') next = siblings[idx - 1];
-    else if (e.key === 'ArrowRight') next = inCol(col + 1)[idx];
-    else if (e.key === 'ArrowLeft') next = inCol(col - 1)[idx];
+    let nextCol = col;
+    let nextRank = rank;
+    if (e.key === 'ArrowDown') nextRank = rank + 1;
+    else if (e.key === 'ArrowUp') nextRank = rank - 1;
+    else if (e.key === 'ArrowRight') nextCol = col + 1;
+    else if (e.key === 'ArrowLeft') nextCol = col - 1;
     else if (e.key === 'Escape') {
       node.blur();
       return;
     } else return;
 
-    if (next) {
+    const target = document.querySelector<HTMLElement>(
+      `.pnode[data-col="${nextCol}"][data-rank="${nextRank}"]`,
+    );
+    if (target) {
       e.preventDefault();
-      next.focus();
+      target.focus();
     }
   }, []);
+
+  // The one rule CSS cannot express on its own: light the rank whose key matches the
+  // board's. Validated against the taxonomy before it reaches a stylesheet, so nothing
+  // but a known node key can ever be interpolated here.
+  const lit = activeRank(focus);
+  const litRule =
+    lit && NODE_SPEC_BY_KEY.has(lit)
+      ? `.board[data-focus-rank] .pnode[data-rank-key="${lit}"],
+         .board[data-focus-rank] .rank-band[data-rank-key="${lit}"] { opacity: 1; }
+         .board[data-focus-rank] .rank-band[data-rank-key="${lit}"] { background: var(--node-fill-raised); }
+         .board[data-focus-rank] .pnode[data-rank-key="${lit}"][data-kind="ghost"] { opacity: var(--diff-ghost-opacity); }
+         .board[data-focus-rank] .gutter-label[data-rank-key="${lit}"] { color: var(--color-ink); }`
+      : '';
+
+  return (
+    <MeasureContext.Provider value={reportHeight}>
+      <div
+        className="board"
+        onKeyDown={onKeyDown}
+        // The whole cross-column highlight is CSS keyed off this one attribute. It is the
+        // reason hovering a node does not rebuild a single React Flow node.
+        {...(lit ? { 'data-focus-rank': lit } : {})}
+      >
+        {litRule ? <style>{litRule}</style> : null}
+
+        <div className="gutter" aria-hidden="true">
+          {diff.rankPlan.map((key) => {
+            const place = layout.rows.get(key);
+            const spec = NODE_SPEC_BY_KEY.get(key);
+            if (!place || !spec) return null;
+            return (
+              <div
+                key={key}
+                className="gutter-label"
+                data-rank-key={key}
+                style={{ top: place.y * viewport.zoom + viewport.y }}
+              >
+                <span className="gutter-tick" />
+                <span className="gutter-text">{spec.title}</span>
+              </div>
+            );
+          })}
+          {hidden > 0 ? (
+            <div className="gutter-hidden">
+              {hidden} identical row{hidden === 1 ? '' : 's'} hidden
+            </div>
+          ) : null}
+        </div>
+
+        <div className="board-canvas" ref={shellRef}>
+          <ReactFlow
+            nodes={board.nodes}
+            edges={board.edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onMove={(_, v) => setLocalViewport(v)}
+            // A programmatic setViewport arrives with no event; only a person's does.
+            onMoveStart={(event) => {
+              if (event) userMoved.current = true;
+            }}
+            // The pointer half of the cross-column highlight has to live HERE rather than
+            // on the node component. React Flow gives a node wrapper `pointer-events: none`
+            // unless the node is selectable or draggable, or the flow carries these
+            // handlers - and this board deliberately makes nodes neither. Wired on the
+            // node itself, the hover silently never fires.
+            onNodeMouseEnter={(_, node) => {
+              const key = (node.data as { nodeKey?: NodeKey }).nodeKey;
+              if (key) focus.setRank(key);
+            }}
+            onNodeMouseLeave={() => focus.setRank(null)}
+            defaultViewport={{ x: PAD, y: PAD, zoom: 1 }}
+            minZoom={0.4}
+            maxZoom={1.3}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            nodesFocusable
+            edgesFocusable={false}
+            panOnScroll
+            selectionOnDrag={false}
+            proOptions={{ hideAttribution: true }}
+            aria-label={`Comparing ${selected.length} Conditional Access policies`}
+          >
+            {/* The auto-fit above can land well under 1x for a large comparison, and
+              panOnScroll claims the wheel for panning - so scroll-to-zoom isn't there
+              as an escape hatch. This is the one discoverable way back to a size the
+              user chose rather than the one that happened to fit. */}
+            <Controls showInteractive={false} position="bottom-right" />
+          </ReactFlow>
+        </div>
+      </div>
+    </MeasureContext.Provider>
+  );
+}
+
+export function CompareBoard() {
+  const selected = useSelectedPolicies();
 
   if (selected.length === 0) {
     return (
       <div className="empty">
         <h2>Nothing selected yet</h2>
         <p>
-          Pick policies from the list on the left. One shows a single flow; two or more line
-          them up side by side and mark every row where they disagree.
+          Pick policies from the list on the left. One shows a single flow; two or more line them up
+          side by side and mark every row where they disagree.
         </p>
-        <p>
-          94 baseline policies are loaded from Van Surksum, Maester, CIS and CISA SCuBA. You
-          can also load your own exported policies &mdash; they stay in this browser.
+        <p className="empty-sub">
+          94 baseline policies from Van Surksum, Maester, CIS and CISA SCuBA. You can also load your
+          own exported policies &mdash; they stay in this browser.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="board" ref={boardRef} onKeyDown={onKeyDown}>
-      <RankGutter layout={layout} rankPlan={diff.rankPlan} viewport={viewport} />
-      <div className="columns">
-        {selected.map((policy, i) => (
-          <div
-            className="column"
-            key={policy.policyKey}
-            data-col={i}
-            style={{ width: NODE_W + 40 }}
-          >
-            <div className="column-head">
-              <div className="column-source">
-                <span>{policy.source === 'tenant' ? 'loaded' : policy.baselineKey}</span>
-                <span>{policy.id}</span>
-              </div>
-              <div className="column-name" title={policy.fullName ?? policy.name}>
-                {policy.name}
-              </div>
-            </div>
-            <div className="column-flow">
-              <ReactFlowProvider>
-                <ColumnFlow
-                  policy={policy}
-                  columnIndex={i}
-                  diff={diff}
-                  layout={layout}
-                  key={linked ? 'linked' : 'free'}
-                />
-              </ReactFlowProvider>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <ReactFlowProvider key={selected.map((p) => p.policyKey).join('|')}>
+      <Board />
+    </ReactFlowProvider>
   );
 }
+
+export { COL_PITCH };

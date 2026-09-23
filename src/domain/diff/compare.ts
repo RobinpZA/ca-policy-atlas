@@ -19,12 +19,24 @@ export type DiffStatus =
 
 export type DiffReason = 'polarity' | 'unspecified' | 'specificity' | 'value';
 
-/** Higher wins when rolling facet statuses up to a node. */
+/** Each reason in words, for the table and the export. Restates compareGroup's table below. */
+export const REASON_TEXT: Readonly<Record<DiffReason, string>> = {
+  polarity: 'opposite polarity',
+  unspecified: 'declared without a value on one side',
+  specificity: 'any value vs a specific one',
+  value: 'values differ',
+};
+
+/**
+ * Higher wins when rolling facet statuses up to a node. No two statuses may tie: a tie
+ * keeps whichever facet came first, and when that was `differs/coverage` it hid a real
+ * `differs` in the same node behind the lightest encoding.
+ */
 export const SEVERITY: Readonly<Record<DiffStatus, number>> = {
   only: 5,
   conflict: 4,
   differs: 3,
-  'differs/coverage': 3,
+  'differs/coverage': 2.5,
   missing: 2,
   same: 1,
   single: 0,

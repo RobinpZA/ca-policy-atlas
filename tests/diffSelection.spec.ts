@@ -252,3 +252,17 @@ describe('real corpus comparison', () => {
     expect(d.byPath.get('conditions.locations.excludeLocations')?.reason).toBe('specificity');
   });
 });
+
+describe('node roll-up', () => {
+  it('lets a real difference outrank a coverage gap in the same node', () => {
+    // builtInControls: equal in a and b, absent in c -> differs/coverage for a and b.
+    // operator: OR vs AND vs OR -> differs. Coverage comes first in taxonomy order, and
+    // with the two tied on severity it used to win the roll-up.
+    const a = synth('a', { grantControls: { builtInControls: ['mfa'], operator: 'OR' } });
+    const b = synth('b', { grantControls: { builtInControls: ['mfa'], operator: 'AND' } });
+    const c = synth('c', { grantControls: { operator: 'OR' } });
+    const d = diffSelection([a, b, c]);
+    expect(d.byPath.get('grantControls.builtInControls')?.status[0]).toBe('differs/coverage');
+    expect(d.nodeStatus[0]?.get('ctrl.grant')).toBe('differs');
+  });
+});

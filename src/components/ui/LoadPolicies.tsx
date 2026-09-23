@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import { parsePolicyFile, PolicyParseError } from '../../domain/adapters/fromGraph.ts';
+import { uncomparedPaths } from '../../domain/types.ts';
 import { useAppState, useDispatch } from '../../state/appState.tsx';
 
 /**
@@ -29,9 +30,13 @@ export function LoadPolicies() {
         type: 'addLoaded',
         policies: policies.map((p, i) => ({ ...p, policyKey: `tenant~${base + i}` })),
       });
+      const partial = policies.filter((p) => uncomparedPaths(p).length > 0).length;
+      const caveat = partial
+        ? ` ${partial} carr${partial === 1 ? 'ies' : 'y'} settings this tool does not model yet - see "not compared" on the column head.`
+        : '';
       dispatch({
         type: 'notice',
-        value: `Loaded ${policies.length} polic${policies.length === 1 ? 'y' : 'ies'}. They stay in this browser — nothing was uploaded.`,
+        value: `Loaded ${policies.length} polic${policies.length === 1 ? 'y' : 'ies'}. They stay in this browser — nothing was uploaded.${caveat}`,
       });
     } catch (err) {
       dispatch({
@@ -56,6 +61,11 @@ export function LoadPolicies() {
         accept="application/json,.json"
         multiple
         className="visually-hidden"
+        // The button below is the real control; this input is only its file dialog.
+        // Left in the a11y tree it is an unlabelled form element and a second tab stop
+        // for the same action.
+        tabIndex={-1}
+        aria-hidden="true"
         onChange={(e) => void handleFiles(e.target.files)}
       />
       <button
