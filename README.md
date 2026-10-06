@@ -1,6 +1,6 @@
 # CA Policy Atlas
 
-Render Microsoft Entra Conditional Access policies as flow graphs, side by side, with every row where they disagree marked.
+Learn, compare and check Microsoft Entra Conditional Access policies. Policies render as flow graphs, side by side, with every row where they disagree marked.
 
 Ships with 94 curated baseline policies from four frameworks: Van Surksum (49), Maester (19), CIS Microsoft 365 Foundations (16) and CISA SCuBA (10). You can also load your own exported policies and measure them against any of those baselines.
 
@@ -61,6 +61,8 @@ Select one policy to read it. Select two or more (up to six) to compare them.
 **Table** shows the same diff as an accessible table. It explains in words why each row differs.
 
 **Coverage** answers the question people loading a tenant export usually have. Pick a baseline and, for each of its policies, see the closest loaded policy, how many requirements it meets and which it misses. A **Compare** button opens the pair side by side.
+
+**Learn** (header button) explains and practises policy-building in an overlay. **Anatomy** walks the fourteen parts of a policy in board order: what each says, why it matters, the common mistake, and how a real baseline fills it in. **Build** lets you drag pieces (or click, then **Place**) into slots. A plain-English readout and a "Before Entra will save it" checklist update as you go. Five challenges are scored against real baseline policies using the Coverage rules, and **Compare in Atlas** adds your draft as a column. Drafts, like loaded policies, never enter the URL.
 
 **Export** saves the current comparison as CSV (UTF-8 BOM for Excel, formula-injection safe) or Markdown (policies, verdict, dimension table, notes).
 
@@ -172,10 +174,10 @@ config/          baseline registry, app-id map
 scripts/         census guard, baseline sync, app-id sync
 src/
   data/          the four baseline files + loader
-  domain/        types · facetSpecs · aliases · adapters · graph · diff (compare, coverage, export)
+  domain/        types · facetSpecs · aliases · adapters · graph · diff (compare, coverage, export) · learn
   state/         reducer + hash sync, cross-column focus, node measurement
-  components/    picker · compare board · flow nodes · diff table · coverage · ui
-  styles/        tokens.css (read this first) · global · flow
+  components/    picker · compare board · flow nodes · diff table · coverage · learn · ui
+  styles/        tokens.css (read this first) · global · flow · learn
 tests/           domain, coverage, export, layout, geometry, adapter, Graph fixtures, mount smoke
 ```
 

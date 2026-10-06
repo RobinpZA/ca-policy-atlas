@@ -5,6 +5,32 @@ Format follows Keep a Changelog; versioning is MAJOR.MINOR.PATCH.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-06
+
+### Added
+
+- **Learn** overlay (header button), a native modal dialog with two tabs.
+  - **Anatomy** walks the fourteen ranks of a policy in board order: what each says, why
+    it matters, the common mistake, and how a real baseline fills it in.
+  - **Build** assembles a policy by dragging pieces into slots, or by click-then-Place for
+    keyboard and touch. A plain-English readout and a "Before Entra will save it"
+    checklist update live.
+  - Five **challenges**, each scored against a real CIS, Maester or CISA baseline policy
+    with the Coverage rules (`matchTenant`). There is no second scoring scheme.
+  - **Compare in Atlas** adds the draft as a column. It goes out as Graph JSON through
+    `normalizeGraphPolicy`, so it behaves exactly like a loaded tenant policy and never
+    enters the URL.
+- `builder: true` on `FacetSpec` marks the facets the builder offers, so
+  `facetSpecs.ts` stays the only list of dimensions.
+- Groups and named locations in the builder are clearly marked examples
+  ("Break-glass accounts (example)"), never invented GUIDs. Directory roles are deferred
+  until a verified role-template list exists.
+
+### Changed
+
+- Subtitle is now "learn, compare and check Conditional Access policies" (header,
+  `package.json`, page meta, README).
+
 ## [0.3.0] - 2026-09-23
 
 ### Added

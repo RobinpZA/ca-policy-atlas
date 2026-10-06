@@ -158,3 +158,87 @@ describe('the app mounts', () => {
     );
   });
 });
+
+describe('learn mode', () => {
+  const button = (el: HTMLElement, text: string) =>
+    [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === text);
+
+  const slot = (el: HTMLElement, label: string) =>
+    el.querySelector<HTMLElement>(`.slot[aria-label="${label}"]`)!;
+
+  /** Click-to-place: pick a piece from a palette group, then press Place on the slot. */
+  function placePiece(el: HTMLElement, piece: string, slotLabel: string) {
+    const chip = [...el.querySelectorAll<HTMLButtonElement>('.piece')].find(
+      (b) => b.textContent === piece,
+    );
+    expect(chip, piece).toBeDefined();
+    act(() => chip!.click());
+    const place = [...slot(el, slotLabel).querySelectorAll('button')].find(
+      (b) => b.textContent === 'Place',
+    );
+    expect(place, `${piece} -> ${slotLabel}`).toBeDefined();
+    act(() => place!.click());
+  }
+
+  it('opens on Anatomy and steps through the ranks', () => {
+    const el = mount();
+    act(() => button(el, 'Learn')!.click());
+    expect(el.querySelector('dialog.learn')?.hasAttribute('open')).toBe(true);
+    expect(el.querySelector('.anatomy-title')?.textContent).toBe('Policy');
+    act(() => button(el, 'Next: Applications')!.click());
+    expect(el.querySelector('.anatomy-title')?.textContent).toBe('Applications');
+    expect(el.querySelector('.anatomy-sample-line')?.textContent).toBe('All Cloud Apps');
+  });
+
+  it('builds a policy by click-to-place, reads it back, and sends it to the board', () => {
+    const el = mount('#/c/Maester~MT.1007?v=table');
+    act(() => button(el, 'Learn')!.click());
+    act(() => button(el, 'Build')!.click());
+
+    placePiece(el, 'All users', 'Include users');
+    placePiece(el, 'All Cloud Apps', 'Include apps');
+    placePiece(el, 'Require MFA', 'Controls');
+
+    const placed = slot(el, 'Include users').querySelector('.placed');
+    expect(placed?.textContent).toContain('All users');
+    const readout = el.querySelector('.readout')!.textContent;
+    expect(readout).toContain('All users');
+    expect(readout).toContain('Grant if Require MFA');
+    expect(el.querySelector('.learn-ok')?.textContent).toMatch(/Entra would accept/);
+
+    act(() => button(el, 'Compare in Atlas')!.click());
+    expect(el.querySelector('dialog.learn')?.hasAttribute('open')).toBe(false);
+    const headers = [...el.querySelectorAll('table.diff thead th')].map((th) => th.textContent);
+    expect(headers.some((h) => h?.includes('My draft policy'))).toBe(true);
+    // A loaded draft is tenant-like: it must never reach the shareable link.
+    expect(window.location.hash).not.toContain('tenant~');
+  });
+
+  it('removes a placed piece when it is clicked', () => {
+    const el = mount();
+    act(() => button(el, 'Learn')!.click());
+    act(() => button(el, 'Build')!.click());
+    placePiece(el, 'iOS', 'Exclude platforms');
+    expect(el.querySelector('.problems')?.textContent).toMatch(/Include platforms/);
+    act(() => slot(el, 'Exclude platforms').querySelector<HTMLButtonElement>('.placed')!.click());
+    expect(slot(el, 'Exclude platforms').querySelector('.placed')).toBeNull();
+  });
+
+  it('scores a challenge with the coverage rules', () => {
+    const el = mount();
+    act(() => button(el, 'Learn')!.click());
+    act(() => button(el, 'Build')!.click());
+    const pick = el.querySelector<HTMLSelectElement>('#challenge-pick')!;
+    act(() => {
+      pick.value = 'legacy-auth';
+      pick.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    act(() => button(el, 'Check')!.click());
+    expect(el.querySelector('.challenge-result')?.textContent).toMatch(/0 of 4 requirements met/);
+
+    act(() => button(el, 'Show answer')!.click());
+    act(() => button(el, 'Check')!.click());
+    expect(el.querySelector('.challenge-result')?.textContent).toMatch(/Passed/);
+  });
+});

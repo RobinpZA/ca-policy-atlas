@@ -1,14 +1,17 @@
 import { CompareBoard } from './components/Compare/CompareBoard.tsx';
 import { CoverageView } from './components/Coverage/CoverageView.tsx';
 import { DiffTable } from './components/DiffTable/DiffTable.tsx';
+import { LearnDialog } from './components/Learn/LearnDialog.tsx';
 import { PolicyPicker } from './components/PolicyPicker/PolicyPicker.tsx';
 import { VerdictStrip } from './components/ui/VerdictStrip.tsx';
+import { useState } from 'react';
 import { useAppState, useDispatch } from './state/appState.tsx';
 import { FocusProvider } from './state/focus.tsx';
 
 export function App() {
   const state = useAppState();
   const dispatch = useDispatch();
+  const [learning, setLearning] = useState(false);
 
   return (
     <FocusProvider>
@@ -18,11 +21,21 @@ export function App() {
 
       <header className="app-header">
         <h1 className="app-title">
-          CA Policy Atlas <span>&mdash; Conditional Access baselines</span>
+          CA Policy Atlas <span>&mdash; learn, compare and check Conditional Access policies</span>
         </h1>
         <span className="app-version">v{__APP_VERSION__}</span>
 
         <div className="header-spacer" />
+
+        <button
+          type="button"
+          className="btn"
+          aria-haspopup="dialog"
+          title="How a Conditional Access policy is built, and a place to build one"
+          onClick={() => setLearning(true)}
+        >
+          Learn
+        </button>
 
         <div className="toggle-group" role="group" aria-label="View">
           <button
@@ -84,6 +97,8 @@ export function App() {
           )}
         </main>
       </div>
+
+      <LearnDialog open={learning} onClose={() => setLearning(false)} />
     </FocusProvider>
   );
 }

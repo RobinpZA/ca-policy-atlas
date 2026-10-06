@@ -13,6 +13,7 @@ import '@fontsource-variable/geist';
 import '@fontsource-variable/jetbrains-mono';
 import './styles/global.css';
 import './styles/flow.css';
+import './styles/learn.css';
 
 import { App } from './App.tsx';
 import { AppProvider } from './state/appState.tsx';

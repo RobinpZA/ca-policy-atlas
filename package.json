@@ -1,8 +1,8 @@
 {
   "name": "ca-policy-atlas",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
-  "description": "Visualize and compare Microsoft Entra Conditional Access baseline policies as side-by-side flow graphs.",
+  "description": "Learn, compare and check Microsoft Entra Conditional Access policies against curated baselines, as side-by-side flow graphs.",
   "author": "Robin Pieterse · Turrito Networks",
   "license": "MIT",
   "type": "module",

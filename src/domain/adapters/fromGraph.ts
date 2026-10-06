@@ -52,7 +52,7 @@ const CONSUMED_PREFIXES: readonly string[] = [
   'conditions.users.excludeGuestsOrExternalUsers.',
 ];
 
-const COPY_PAIRS: ReadonlyArray<readonly [from: string, to: string]> = [
+export const COPY_PAIRS: ReadonlyArray<readonly [from: string, to: string]> = [
   ['conditions.applications.includeApplications', 'applications.includeApplications'],
   ['conditions.applications.excludeApplications', 'applications.excludeApplications'],
   ['conditions.applications.includeUserActions', 'applications.includeUserActions'],

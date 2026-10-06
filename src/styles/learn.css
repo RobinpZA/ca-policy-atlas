@@ -1,0 +1,415 @@
+/* Learn overlay: anatomy walkthrough and the drag-to-build policy.
+ *
+ * ACCENT BUDGET: spends none. Drop targets, the picked chip and the current rank are
+ * carried by outline weight, dashed-vs-solid and ink, exactly like the picker's selected
+ * marks. The accent stays reserved for "which row differs" on the board, so the
+ * arithmetic in tokens.css is unchanged by this file.
+ */
+
+/* ---------------------------------------------------------------- dialog -- */
+
+.learn {
+  width: min(1320px, calc(100vw - 2 * var(--space-md)));
+  height: calc(100dvh - 2 * var(--space-md));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: var(--rule-hair) solid var(--color-rule-ctl);
+  border-radius: var(--radius-input);
+}
+.learn::backdrop {
+  background: color-mix(in oklch, var(--color-paper) 82%, transparent);
+}
+
+.learn-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.learn-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: var(--rule-hair) solid var(--color-rule);
+}
+
+.learn-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+}
+.learn-title span {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--color-neutral);
+}
+
+.learn-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.learn-help {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.learn-ok {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
+
+.learn-input,
+.learn-select {
+  width: 100%;
+  height: 34px;
+  padding: 0 var(--space-xs);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule-ctl);
+  border-radius: var(--radius-input);
+}
+
+/* --------------------------------------------------------------- anatomy -- */
+
+.anatomy {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  max-width: 1040px;
+}
+
+.anatomy-ranks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: var(--spine-w) solid var(--color-rule);
+}
+
+.anatomy-rank {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  width: 100%;
+  min-height: 34px;
+  padding: var(--space-2xs) var(--space-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  text-align: left;
+  color: var(--color-muted);
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  margin-left: -1px;
+  cursor: pointer;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+.anatomy-rank:hover {
+  color: var(--color-ink);
+}
+.anatomy-rank[aria-current='step'] {
+  color: var(--color-ink);
+  font-weight: 600;
+  border-left-color: var(--color-ink);
+}
+
+.anatomy-num {
+  font-family: var(--font-outlier);
+  font-size: var(--text-xs);
+  color: var(--color-neutral);
+}
+
+.anatomy-card {
+  max-width: 68ch;
+}
+
+.anatomy-title {
+  margin: var(--space-2xs) 0 var(--space-md);
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+}
+
+.anatomy-facts {
+  margin: 0;
+}
+.anatomy-facts dt {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+}
+.anatomy-facts dd {
+  margin: var(--space-3xs) 0 var(--space-md);
+  color: var(--color-muted);
+}
+
+.anatomy-example {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+}
+
+.anatomy-sample-line {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+.anatomy-sample-line[data-absent='true'] {
+  color: var(--color-neutral);
+  font-style: italic;
+}
+
+.anatomy-nav {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-lg);
+}
+
+/* --------------------------------------------------------------- builder -- */
+
+.builder {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(300px, 1.4fr) minmax(260px, 1.1fr);
+  min-height: 100%;
+}
+.builder > section,
+.builder > aside {
+  padding: var(--space-md);
+  min-width: 0;
+}
+.builder-palette,
+.builder-slots {
+  border-right: var(--rule-hair) solid var(--color-rule);
+}
+.builder-side {
+  display: grid;
+  align-content: start;
+  gap: var(--space-lg);
+}
+
+.palette-group,
+.slot-group {
+  margin-bottom: var(--space-md);
+}
+.palette-group h3,
+.slot-group h3,
+.builder-side h3 {
+  margin: 0 0 var(--space-2xs);
+}
+
+.piece {
+  cursor: grab;
+}
+.piece:active {
+  cursor: grabbing;
+}
+
+.slot-meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px;
+  gap: var(--space-xs);
+}
+
+/* A slot is a drop zone. Empty: dashed. Accepting the piece in hand: solid ink. */
+.slot {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-xs);
+  margin-top: var(--space-2xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--node-fill);
+  border: var(--rule-hair) dashed var(--color-rule-ctl);
+  border-radius: var(--radius-input);
+}
+.slot[data-ready] {
+  border-style: solid;
+  border-color: var(--color-ink);
+}
+.slot[data-over] {
+  background: var(--node-fill-raised);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+
+.slot-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.slot[data-polarity='exclude'] .slot-label {
+  color: var(--color-neutral);
+}
+.slot-note {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-neutral);
+}
+
+.slot-values {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  min-height: 24px;
+}
+.slot .btn-sm {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.slot-empty {
+  font-size: var(--text-xs);
+  color: var(--color-neutral);
+  font-style: italic;
+  line-height: 24px;
+}
+
+.placed {
+  min-height: 24px;
+  padding: var(--space-3xs) var(--space-xs);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  color: var(--color-ink);
+  background: var(--color-paper-3);
+  border: var(--rule-hair) solid var(--color-rule-ctl);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.placed:hover {
+  border-color: var(--color-ink);
+}
+
+/* Exclusions read as exceptions: struck through rather than recoloured. */
+.slot[data-polarity='exclude'] .placed {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-neutral);
+}
+
+.readout {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2xs);
+}
+.readout-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+}
+.readout-row dt {
+  color: var(--color-neutral);
+}
+.readout-row dd {
+  margin: 0;
+  color: var(--color-ink);
+}
+.readout-row[data-absent='true'] dd {
+  color: var(--color-neutral);
+  font-style: italic;
+}
+.readout-row:last-child dd {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.problems {
+  margin: 0;
+  padding-left: var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+.problems li + li {
+  margin-top: var(--space-2xs);
+}
+
+.challenge {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-input);
+}
+.challenge-goal,
+.challenge-result p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.challenge-hint {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+.challenge-hint summary {
+  cursor: pointer;
+}
+.challenge-hint p {
+  margin: var(--space-2xs) 0 0;
+}
+.challenge-result {
+  display: grid;
+  gap: var(--space-2xs);
+  padding-top: var(--space-xs);
+  border-top: var(--rule-hair) solid var(--color-rule);
+}
+
+.builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+/* ------------------------------------------------------------ responsive -- */
+
+@media (max-width: 1100px) {
+  .builder {
+    grid-template-columns: minmax(200px, 1fr) minmax(0, 1.5fr);
+  }
+  .builder-side {
+    grid-column: 1 / -1;
+    border-top: var(--rule-hair) solid var(--color-rule);
+  }
+}
+
+@media (max-width: 700px) {
+  .learn {
+    width: 100vw;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .anatomy {
+    grid-template-columns: 1fr;
+    padding: var(--space-md);
+  }
+  .builder {
+    grid-template-columns: 1fr;
+  }
+  .builder-palette,
+  .builder-slots {
+    border-right: 0;
+    border-bottom: var(--rule-hair) solid var(--color-rule);
+  }
+}

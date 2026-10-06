@@ -58,6 +58,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Include apps',
     polarity: 'include',
     tokenKind: 'appId',
+    builder: true,
   },
   {
     path: 'applications.excludeApplications',
@@ -66,6 +67,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Exclude apps',
     polarity: 'exclude',
     tokenKind: 'appId',
+    builder: true,
   },
   {
     path: 'applications.includeUserActions',
@@ -92,6 +94,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Include users',
     polarity: 'include',
     tokenKind: 'identity',
+    builder: true,
   },
   {
     path: 'users.includeGroups',
@@ -100,6 +103,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Include groups',
     polarity: 'include',
     tokenKind: 'identity',
+    builder: true,
   },
   {
     path: 'users.includeRoles',
@@ -124,6 +128,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Exclude users',
     polarity: 'exclude',
     tokenKind: 'identity',
+    builder: true,
   },
   {
     path: 'users.excludeGroups',
@@ -132,6 +137,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Exclude groups',
     polarity: 'exclude',
     tokenKind: 'identity',
+    builder: true,
   },
   {
     path: 'users.excludeRoles',
@@ -158,6 +164,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Client app types',
     polarity: 'value',
     tokenKind: 'clientAppType',
+    builder: true,
   },
 
   // -- rank 4: platforms ----------------------------------------------------
@@ -168,6 +175,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Include platforms',
     polarity: 'include',
     tokenKind: 'platform',
+    builder: true,
   },
   {
     path: 'platforms.excludePlatforms',
@@ -176,6 +184,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Exclude platforms',
     polarity: 'exclude',
     tokenKind: 'platform',
+    builder: true,
   },
 
   // -- rank 5: device state -------------------------------------------------
@@ -204,6 +213,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Include locations',
     polarity: 'include',
     tokenKind: 'location',
+    builder: true,
   },
   {
     path: 'conditions.locations.excludeLocations',
@@ -212,6 +222,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Exclude locations',
     polarity: 'exclude',
     tokenKind: 'location',
+    builder: true,
   },
 
   // -- ranks 7-9: risk ------------------------------------------------------
@@ -222,6 +233,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Sign-in risk',
     polarity: 'value',
     tokenKind: 'riskLevel',
+    builder: true,
   },
   {
     path: 'conditions.userRiskLevels',
@@ -230,6 +242,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'User risk',
     polarity: 'value',
     tokenKind: 'riskLevel',
+    builder: true,
   },
   {
     path: 'conditions.insiderRiskLevels',
@@ -274,6 +287,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Controls',
     polarity: 'require',
     tokenKind: 'grantControl',
+    builder: true,
   },
   {
     path: 'grantControls.authenticationStrength.requirementsSatisfied',
@@ -306,6 +320,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Operator',
     polarity: 'value',
     tokenKind: 'operator',
+    builder: true,
   },
   {
     // CAD006 is the only policy with `grantControls: {}` - the container is declared
@@ -336,6 +351,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Frequency interval',
     polarity: 'value',
     tokenKind: 'raw',
+    builder: true,
   },
   {
     path: 'sessionControls.persistentBrowser.isEnabled',
@@ -352,6 +368,7 @@ export const FACET_SPECS: readonly FacetSpec[] = [
     label: 'Browser mode',
     polarity: 'value',
     tokenKind: 'persistentBrowserMode',
+    builder: true,
   },
   {
     path: 'sessionControls.applicationEnforcedRestrictions.isEnabled',

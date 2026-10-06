@@ -175,3 +175,10 @@ export function resolveTokens(exp: Expectation, kind: TokenKind): readonly Displ
 
 /** Every application identifier this build knows how to name. Used by the verify script. */
 export const knownAppIds = (): readonly string[] => Object.keys(APP_IDS);
+
+/**
+ * Every raw value this build can name for a token kind - the Learn builder's palette.
+ * Table keys are lowercased, which is fine: every comparison is case-insensitive.
+ */
+export const knownValues = (kind: TokenKind): readonly string[] =>
+  kind === 'appId' ? knownAppIds() : Object.keys(LOOKUPS[kind] ?? {});
