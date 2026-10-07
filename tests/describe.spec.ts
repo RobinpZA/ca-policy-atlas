@@ -12,7 +12,7 @@ describe('describePolicy', () => {
     const wildcard = line({ platforms: { includePlatforms: true } }, 'cond.platforms')!.text;
     const empty = line({ platforms: { includePlatforms: [] } }, 'cond.platforms')!.text;
     expect(new Set([absent, wildcard, empty]).size).toBe(3);
-    expect(absent).toMatch(/No condition/);
+    expect(absent).toMatch(/No platform condition/);
     expect(wildcard).toMatch(/any value you choose/);
     expect(empty).toMatch(/declared, but empty/);
   });

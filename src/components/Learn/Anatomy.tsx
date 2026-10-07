@@ -58,7 +58,7 @@ export function Anatomy({ onBuild }: { onBuild: () => void }) {
         <dl className="anatomy-facts">
           <dt>What it says</dt>
           <dd>{entry.what}</dd>
-          <dt>Why it matters</dt>
+          <dt>In practice</dt>
           <dd>{entry.why}</dd>
           <dt>Common mistake</dt>
           <dd>{entry.pitfall}</dd>
@@ -86,7 +86,7 @@ export function Anatomy({ onBuild }: { onBuild: () => void }) {
                 ? `${sample.name}${sample.state ? ` (${sample.state})` : ''}`
                 : line
                   ? line.text
-                  : 'This policy says nothing here.'}
+                  : entry.unset}
             </p>
           </section>
         ) : null}

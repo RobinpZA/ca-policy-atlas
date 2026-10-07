@@ -12,6 +12,7 @@
 import { FACETS_BY_NODE, NODE_SPECS } from '../facetSpecs.ts';
 import { terminalOf } from '../graph/terminal.ts';
 import type { Facet, FacetMap, NodeKey } from '../types.ts';
+import { ANATOMY } from './anatomy.ts';
 import { BUILDER_SPECS } from './draft.ts';
 
 export interface ReadoutLine {
@@ -43,13 +44,6 @@ export function phrase(f: Facet): string {
 
 /** Ranks the builder offers. Only these say "not set" aloud when empty. */
 const BUILDER_NODES: ReadonlySet<NodeKey> = new Set(BUILDER_SPECS.map((s) => s.node));
-
-const notSet = (node: NodeKey): string =>
-  node.startsWith('scope.')
-    ? 'Not set yet - Entra requires this'
-    : node.startsWith('cond.')
-      ? 'No condition - applies whatever this is'
-      : 'None';
 
 function nodeText(facets: readonly Facet[]): string {
   const included = facets.filter((f) => f.polarity === 'include').map(phrase);
@@ -89,7 +83,7 @@ export function describePolicy(facets: FacetMap): readonly ReadoutLine[] {
 
     if (!present.length) {
       if (BUILDER_NODES.has(node.key)) {
-        lines.push({ node: node.key, title: node.title, text: notSet(node.key), absent: true });
+        lines.push({ node: node.key, title: node.title, text: ANATOMY[node.key].unset, absent: true });
       }
       continue;
     }
