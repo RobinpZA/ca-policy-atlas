@@ -480,6 +480,10 @@ body {
   font-size: var(--text-sm);
   color: var(--color-muted);
 }
+.notice-intro {
+  border-left-color: var(--color-rule-ctl);
+  color: var(--color-ink);
+}
 
 /* ----------------------------------------------------------- empty state -- */
 

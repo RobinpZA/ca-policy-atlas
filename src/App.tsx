@@ -3,15 +3,22 @@ import { CoverageView } from './components/Coverage/CoverageView.tsx';
 import { DiffTable } from './components/DiffTable/DiffTable.tsx';
 import { LearnDialog } from './components/Learn/LearnDialog.tsx';
 import { PolicyPicker } from './components/PolicyPicker/PolicyPicker.tsx';
+import { LearnIntro } from './components/ui/LearnIntro.tsx';
 import { VerdictStrip } from './components/ui/VerdictStrip.tsx';
 import { useState } from 'react';
 import { useAppState, useDispatch } from './state/appState.tsx';
 import { FocusProvider } from './state/focus.tsx';
+import { useLearnIntro } from './state/learnIntro.ts';
 
 export function App() {
   const state = useAppState();
   const dispatch = useDispatch();
   const [learning, setLearning] = useState(false);
+  const intro = useLearnIntro();
+  const openLearn = () => {
+    intro.dismiss();
+    setLearning(true);
+  };
 
   return (
     <FocusProvider>
@@ -32,7 +39,7 @@ export function App() {
           className="btn"
           aria-haspopup="dialog"
           title="How a Conditional Access policy is built, and a place to build one"
-          onClick={() => setLearning(true)}
+          onClick={openLearn}
         >
           Learn
         </button>
@@ -81,6 +88,8 @@ export function App() {
           </button>
         </div>
       ) : null}
+
+      {intro.show ? <LearnIntro onOpen={openLearn} onDismiss={intro.dismiss} /> : null}
 
       <div className="layout">
         <PolicyPicker />
